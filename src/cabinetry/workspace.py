@@ -5,9 +5,7 @@ from typing import Any, Dict, List, Optional, Union
 
 import pyhf
 
-from . import configuration
-from . import histo
-
+from . import configuration, histo
 
 log = logging.getLogger(__name__)
 

@@ -6,7 +6,6 @@ import boost_histogram as bh
 
 from . import configuration
 
-
 log = logging.getLogger(__name__)
 
 

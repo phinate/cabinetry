@@ -4,10 +4,9 @@ import pathlib
 from typing import Any, Dict, List, Type, TypeVar, Union
 
 import boost_histogram as bh
-import numpy as np
+import jax.numpy as jnp
 
 import cabinetry
-
 
 log = logging.getLogger(__name__)
 
@@ -21,19 +20,19 @@ class Histogram(bh.Histogram, family=cabinetry):
     @classmethod
     def from_arrays(
         cls: Type[H],
-        bins: Union[List[float], np.ndarray],
-        yields: Union[List[float], np.ndarray],
-        stdev: Union[List[float], np.ndarray],
+        bins: Union[List[float], jnp.ndarray],
+        yields: Union[List[float], jnp.ndarray],
+        stdev: Union[List[float], jnp.ndarray],
     ) -> H:
         """Constructs a histogram from arrays of yields and uncertainties.
 
         The input can be lists of ints or floats, or numpy.ndarrays.
 
         Args:
-            bins (Union[List[float], np.ndarray]): edges of histogram bins
-            yields (Union[List[float], np.ndarray]): yield per histogram bin
-            stdev (Union[List[float], np.ndarray]): statistical uncertainty of yield per
-                bin
+            bins (Union[List[float], jnp.ndarray]): edges of histogram bins
+            yields (Union[List[float], jnp.ndarray]): yield per histogram bin
+            stdev (Union[List[float], jnp.ndarray]): statistical uncertainty of yield
+                per bin
 
         Raises:
             ValueError: when amount of bins specified via bin edges and bin contents do
@@ -52,9 +51,9 @@ class Histogram(bh.Histogram, family=cabinetry):
             bh.axis.Variable(bins, underflow=False, overflow=False),
             storage=bh.storage.Weight(),
         )
-        yields = np.asarray(yields)
-        stdev = np.asarray(stdev)
-        out[...] = np.stack([yields, stdev ** 2], axis=-1)
+        yields = jnp.asarray(yields)
+        stdev = jnp.asarray(stdev)
+        out[...] = jnp.stack([yields, stdev ** 2], axis=-1)
         return out
 
     @classmethod
@@ -82,7 +81,7 @@ class Histogram(bh.Histogram, family=cabinetry):
                 log.warning("loading the un-modified histogram instead!")
             else:
                 histo_path = histo_path_modified
-        histogram_npz = np.load(histo_path.with_suffix(".npz"))
+        histogram_npz = jnp.load(histo_path.with_suffix(".npz"))
         bins = histogram_npz["bins"]
         yields = histogram_npz["yields"]
         stdev = histogram_npz["stdev"]
@@ -123,7 +122,7 @@ class Histogram(bh.Histogram, family=cabinetry):
         return cls.from_path(histo_path, modified)
 
     @property
-    def yields(self) -> np.ndarray:
+    def yields(self) -> jnp.ndarray:
         """Returns the yields per histogram bin.
 
         Returns:
@@ -132,25 +131,25 @@ class Histogram(bh.Histogram, family=cabinetry):
         return self.values()
 
     @yields.setter
-    def yields(self, value: np.ndarray) -> None:
+    def yields(self, value: jnp.ndarray) -> None:
         """Updates the yields per bin.
 
         Args:
-            value (np.ndarray): yields to set
+            value (jnp.ndarray): yields to set
         """
         self.view().value = value  # type: ignore
 
     @property
-    def stdev(self) -> np.ndarray:
+    def stdev(self) -> jnp.ndarray:
         """Returns the stat. uncertainty per histogram bin.
 
         Returns:
             numpy.ndarray: stat. uncertainty per bin
         """
-        return np.sqrt(self.variances())  # type: ignore
+        return jnp.sqrt(self.variances())  # type: ignore
 
     @stdev.setter
-    def stdev(self, value: np.ndarray) -> None:
+    def stdev(self, value: jnp.ndarray) -> None:
         """Updates the variance (by specifying the standard deviation).
 
         Args:
@@ -159,7 +158,7 @@ class Histogram(bh.Histogram, family=cabinetry):
         self.view().variance = value ** 2  # type: ignore
 
     @property
-    def bins(self) -> np.ndarray:
+    def bins(self) -> jnp.ndarray:
         """Returns the bin edges.
 
         Returns:
@@ -178,7 +177,7 @@ class Histogram(bh.Histogram, family=cabinetry):
         # create output directory if it does not exist yet
         if not os.path.exists(histo_path.parent):
             os.mkdir(histo_path.parent)
-        np.savez(
+        jnp.savez(
             histo_path.with_suffix(".npz"),
             yields=self.yields,
             stdev=self.stdev,
@@ -195,14 +194,14 @@ class Histogram(bh.Histogram, family=cabinetry):
             name (str): name of the histogram for logging purposes
         """
         # check for empty bins
-        # using np.atleast_1d to fix deprecation warning, even though the
+        # using jnp.atleast_1d to fix deprecation warning, even though the
         # input should never need it
-        empty_bins = np.where(np.atleast_1d(self.yields) == 0.0)[0]
+        empty_bins = jnp.where(jnp.atleast_1d(self.yields) == 0.0)[0]
         if len(empty_bins) > 0:
             log.warning(f"{name} has empty bins: {empty_bins}")
 
         # check for ill-defined stat. unc.
-        nan_pos = np.where(np.isnan(self.stdev))[0]
+        nan_pos = jnp.where(jnp.isnan(self.stdev))[0]
         if len(nan_pos) > 0:
             log.warning(f"{name} has bins with ill-defined stat. unc.: {nan_pos}")
 

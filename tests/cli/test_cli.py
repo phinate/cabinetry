@@ -3,12 +3,12 @@ import pathlib
 from unittest import mock
 
 from click.testing import CliRunner
-import numpy as np
+import jax.numpy as jnp
 import pytest
 import yaml
 
-from cabinetry import cli
-from cabinetry import fit
+
+from cabinetry import cli, fit
 
 
 class CLIHelpers:
@@ -98,7 +98,7 @@ def test_workspace(mock_validate, mock_build, cli_helpers, tmp_path):
 @mock.patch(
     "cabinetry.fit.fit",
     return_value=fit.FitResults(
-        np.asarray([1.0]), np.asarray([0.1]), ["label"], np.asarray([[1.0]]), 1.0
+        jnp.asarray([1.0]), jnp.asarray([0.1]), ["label"], jnp.asarray([[1.0]]), 1.0
     ),
     autospec=True,
 )
@@ -109,10 +109,10 @@ def test_workspace(mock_validate, mock_build, cli_helpers, tmp_path):
 )
 def test_fit(mock_util, mock_fit, mock_pulls, mock_corrmat, tmp_path):
     workspace = {"workspace": "mock"}
-    bestfit = np.asarray([1.0])
-    uncertainty = np.asarray([0.1])
+    bestfit = jnp.asarray([1.0])
+    uncertainty = jnp.asarray([0.1])
     labels = ["label"]
-    corr_mat = np.asarray([[1.0]])
+    corr_mat = jnp.asarray([[1.0]])
     fit_results = fit.FitResults(bestfit, uncertainty, labels, corr_mat, 1.0)
 
     workspace_path = str(tmp_path / "workspace.json")
@@ -200,20 +200,20 @@ def test_fit(mock_util, mock_fit, mock_pulls, mock_corrmat, tmp_path):
 @mock.patch(
     "cabinetry.fit.ranking",
     return_value=fit.RankingResults(
-        np.asarray([1.0]),
-        np.asarray([0.1]),
+        jnp.asarray([1.0]),
+        jnp.asarray([0.1]),
         ["label"],
-        np.asarray([[1.2]]),
-        np.asarray([[0.8]]),
-        np.asarray([[1.1]]),
-        np.asarray([[0.9]]),
+        jnp.asarray([[1.2]]),
+        jnp.asarray([[0.8]]),
+        jnp.asarray([[1.1]]),
+        jnp.asarray([[0.9]]),
     ),
     autospec=True,
 )
 @mock.patch(
     "cabinetry.fit.fit",
     return_value=fit.FitResults(
-        np.asarray([1.0]), np.asarray([0.1]), ["label"], np.asarray([[1.0]]), 1.0
+        jnp.asarray([1.0]), jnp.asarray([0.1]), ["label"], jnp.asarray([[1.0]]), 1.0
     ),
     autospec=True,
 )
@@ -224,10 +224,10 @@ def test_fit(mock_util, mock_fit, mock_pulls, mock_corrmat, tmp_path):
 )
 def test_ranking(mock_util, mock_fit, mock_rank, mock_vis, tmp_path):
     workspace = {"workspace": "mock"}
-    bestfit = np.asarray([1.0])
-    uncertainty = np.asarray([0.1])
+    bestfit = jnp.asarray([1.0])
+    uncertainty = jnp.asarray([0.1])
     labels = ["label"]
-    corr_mat = np.asarray([[1.0]])
+    corr_mat = jnp.asarray([[1.0]])
     fit_results = fit.FitResults(bestfit, uncertainty, labels, corr_mat, 1.0)
 
     workspace_path = str(tmp_path / "workspace.json")
@@ -247,10 +247,10 @@ def test_ranking(mock_util, mock_fit, mock_rank, mock_vis, tmp_path):
         (("model", "data"), {"fit_results": fit_results})
     ]
     assert mock_vis.call_count == 1
-    assert np.allclose(mock_vis.call_args[0][0].prefit_up, [[1.2]])
-    assert np.allclose(mock_vis.call_args[0][0].prefit_down, [[0.8]])
-    assert np.allclose(mock_vis.call_args[0][0].postfit_up, [[1.1]])
-    assert np.allclose(mock_vis.call_args[0][0].postfit_down, [[0.9]])
+    assert jnp.allclose(mock_vis.call_args[0][0].prefit_up, [[1.2]])
+    assert jnp.allclose(mock_vis.call_args[0][0].prefit_down, [[0.8]])
+    assert jnp.allclose(mock_vis.call_args[0][0].postfit_up, [[1.1]])
+    assert jnp.allclose(mock_vis.call_args[0][0].postfit_down, [[0.9]])
     assert mock_vis.call_args[1] == {"figure_folder": "figures", "max_pars": 10}
 
     # Asimov, maximum amount of parameters, custom folder
@@ -271,7 +271,9 @@ def test_ranking(mock_util, mock_fit, mock_rank, mock_vis, tmp_path):
 @mock.patch("cabinetry.visualize.scan", autospec=True)
 @mock.patch(
     "cabinetry.fit.scan",
-    return_value=fit.ScanResults("par", 1.0, 0.1, np.asarray([1.5]), np.asarray([3.5])),
+    return_value=fit.ScanResults(
+        "par", 1.0, 0.1, jnp.asarray([1.5]), jnp.asarray([3.5])
+    ),
     autospec=True,
 )
 @mock.patch(
@@ -289,7 +291,7 @@ def test_scan(mock_util, mock_scan, mock_vis, tmp_path):
 
     par_name = "par"
     scan_results = fit.ScanResults(
-        par_name, 1.0, 0.1, np.asarray([1.5]), np.asarray([3.5])
+        par_name, 1.0, 0.1, jnp.asarray([1.5]), jnp.asarray([3.5])
     )
 
     runner = CliRunner()
@@ -305,10 +307,10 @@ def test_scan(mock_util, mock_scan, mock_vis, tmp_path):
     assert mock_vis.call_args[0][0].name == scan_results.name
     assert mock_vis.call_args[0][0].bestfit == scan_results.bestfit
     assert mock_vis.call_args[0][0].uncertainty == scan_results.uncertainty
-    assert np.allclose(
+    assert jnp.allclose(
         mock_vis.call_args[0][0].parameter_values, scan_results.parameter_values
     )
-    assert np.allclose(mock_vis.call_args[0][0].delta_nlls, scan_results.delta_nlls)
+    assert jnp.allclose(mock_vis.call_args[0][0].delta_nlls, scan_results.delta_nlls)
     assert mock_vis.call_args[1] == {"figure_folder": "figures"}
 
     # only one bound
@@ -362,10 +364,10 @@ def test_scan(mock_util, mock_scan, mock_vis, tmp_path):
     "cabinetry.fit.limit",
     return_value=fit.LimitResults(
         3.0,
-        np.asarray([1.0, 2.0, 3.0, 4.0, 5.0]),
-        np.asarray([0.05]),
-        np.asarray([0.01, 0.02, 0.05, 0.07, 0.10]),
-        np.asarray([3.0]),
+        jnp.asarray([1.0, 2.0, 3.0, 4.0, 5.0]),
+        jnp.asarray([0.05]),
+        jnp.asarray([0.01, 0.02, 0.05, 0.07, 0.10]),
+        jnp.asarray([3.0]),
     ),
     autospec=True,
 )
@@ -384,10 +386,10 @@ def test_limit(mock_util, mock_limit, mock_vis, tmp_path):
 
     limit_results = fit.LimitResults(
         3.0,
-        np.asarray([1.0, 2.0, 3.0, 4.0, 5.0]),
-        np.asarray([0.05]),
-        np.asarray([0.01, 0.02, 0.05, 0.07, 0.10]),
-        np.asarray([3.0]),
+        jnp.asarray([1.0, 2.0, 3.0, 4.0, 5.0]),
+        jnp.asarray([0.05]),
+        jnp.asarray([0.01, 0.02, 0.05, 0.07, 0.10]),
+        jnp.asarray([3.0]),
     )
 
     runner = CliRunner()
@@ -398,19 +400,19 @@ def test_limit(mock_util, mock_limit, mock_vis, tmp_path):
     assert mock_util.call_args_list == [((workspace,), {"asimov": False})]
     assert mock_limit.call_args_list == [(("model", "data"), {"tolerance": 0.01})]
     assert mock_vis.call_count == 1
-    assert np.allclose(
+    assert jnp.allclose(
         mock_vis.call_args[0][0].observed_limit, limit_results.observed_limit
     )
-    assert np.allclose(
+    assert jnp.allclose(
         mock_vis.call_args[0][0].expected_limit, limit_results.expected_limit
     )
-    assert np.allclose(
+    assert jnp.allclose(
         mock_vis.call_args[0][0].observed_CLs, limit_results.observed_CLs
     )
-    assert np.allclose(
+    assert jnp.allclose(
         mock_vis.call_args[0][0].expected_CLs, limit_results.expected_CLs
     )
-    assert np.allclose(mock_vis.call_args[0][0].poi_values, limit_results.poi_values)
+    assert jnp.allclose(mock_vis.call_args[0][0].poi_values, limit_results.poi_values)
     assert mock_vis.call_args[1] == {"figure_folder": "figures"}
 
     # Asimov, tolerance, custom folder
@@ -457,7 +459,7 @@ def test_significance(mock_util, mock_sig, tmp_path):
 @mock.patch(
     "cabinetry.fit.fit",
     return_value=fit.FitResults(
-        np.asarray([1.0]), np.asarray([0.1]), ["label"], np.asarray([[1.0]]), 1.0
+        jnp.asarray([1.0]), jnp.asarray([0.1]), ["label"], jnp.asarray([[1.0]]), 1.0
     ),
     autospec=True,
 )
@@ -495,7 +497,7 @@ def test_data_mc(mock_util, mock_validate, mock_fit, mock_vis, cli_helpers, tmp_
     config_path = str(tmp_path / "config.yml")
     cli_helpers.write_config(config_path, config)
     fit_results = fit.FitResults(
-        np.asarray([1.0]), np.asarray([0.1]), ["label"], np.asarray([[1.0]]), 1.0
+        jnp.asarray([1.0]), jnp.asarray([0.1]), ["label"], jnp.asarray([[1.0]]), 1.0
     )
 
     result = runner.invoke(

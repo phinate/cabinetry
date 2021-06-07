@@ -1,7 +1,7 @@
 import copy
 import logging
 
-import numpy as np
+import jax.numpy as jnp
 import pyhf
 
 from cabinetry import model_utils
@@ -51,11 +51,11 @@ def test_build_Asimov_data(example_spec):
 def test_get_asimov_parameters(example_spec, example_spec_shapefactor):
     model = pyhf.Workspace(example_spec).model()
     pars = model_utils.get_asimov_parameters(model)
-    assert np.allclose(pars, [1.0, 1.0])
+    assert jnp.allclose(pars, [1.0, 1.0])
 
     model = pyhf.Workspace(example_spec_shapefactor).model()
     pars = model_utils.get_asimov_parameters(model)
-    assert np.allclose(pars, [1.0, 1.0, 1.0])
+    assert jnp.allclose(pars, [1.0, 1.0, 1.0])
 
     # respect nominal settings for normfactors
     example_spec["measurements"][0]["config"]["parameters"].append(
@@ -63,7 +63,7 @@ def test_get_asimov_parameters(example_spec, example_spec_shapefactor):
     )
     model = pyhf.Workspace(example_spec).model()
     pars = model_utils.get_asimov_parameters(model)
-    assert np.allclose(pars, [1.0, 2.0])
+    assert jnp.allclose(pars, [1.0, 2.0])
 
 
 def test_get_prefit_uncertainties(
@@ -71,15 +71,15 @@ def test_get_prefit_uncertainties(
 ):
     model = pyhf.Workspace(example_spec).model()
     unc = model_utils.get_prefit_uncertainties(model)
-    assert np.allclose(unc, [0.0, 0.0])  # fixed parameter and normfactor
+    assert jnp.allclose(unc, [0.0, 0.0])  # fixed parameter and normfactor
 
     model = pyhf.Workspace(example_spec_multibin).model()
     unc = model_utils.get_prefit_uncertainties(model)
-    assert np.allclose(unc, [0.2, 0.4, 0.0, 0.125])
+    assert jnp.allclose(unc, [0.2, 0.4, 0.0, 0.125])
 
     model = pyhf.Workspace(example_spec_shapefactor).model()
     unc = model_utils.get_prefit_uncertainties(model)
-    assert np.allclose(unc, [0.0, 0.0, 0.0])
+    assert jnp.allclose(unc, [0.0, 0.0, 0.0])
 
 
 def test__get_channel_boundary_indices(example_spec, example_spec_multibin):
@@ -105,31 +105,31 @@ def test__get_channel_boundary_indices(example_spec, example_spec_multibin):
 
 def test_calculate_stdev(example_spec, example_spec_multibin):
     model = pyhf.Workspace(example_spec).model()
-    parameters = np.asarray([1.05, 0.95])
-    uncertainty = np.asarray([0.1, 0.1])
-    corr_mat = np.asarray([[1.0, 0.2], [0.2, 1.0]])
+    parameters = jnp.asarray([1.05, 0.95])
+    uncertainty = jnp.asarray([0.1, 0.1])
+    corr_mat = jnp.asarray([[1.0, 0.2], [0.2, 1.0]])
 
     total_stdev_bin, total_stdev_chan = model_utils.calculate_stdev(
         model, parameters, uncertainty, corr_mat
     )
-    assert np.allclose(total_stdev_bin, [[8.03767016]])
-    assert np.allclose(total_stdev_chan, [8.03767016])
+    assert jnp.allclose(total_stdev_bin, [[8.03767016]])
+    assert jnp.allclose(total_stdev_chan, [8.03767016])
 
     # pre-fit
-    parameters = np.asarray([1.0, 1.0])
-    uncertainty = np.asarray([0.0495665682, 0.0])
-    diag_corr_mat = np.diag([1.0, 1.0])
+    parameters = jnp.asarray([1.0, 1.0])
+    uncertainty = jnp.asarray([0.0495665682, 0.0])
+    diag_corr_mat = jnp.diag([1.0, 1.0])
     total_stdev_bin, total_stdev_chan = model_utils.calculate_stdev(
         model, parameters, uncertainty, diag_corr_mat
     )
-    assert np.allclose(total_stdev_bin, [[2.56951880]])  # the staterror
-    assert np.allclose(total_stdev_chan, [2.56951880])
+    assert jnp.allclose(total_stdev_bin, [[2.56951880]])  # the staterror
+    assert jnp.allclose(total_stdev_chan, [2.56951880])
 
     # multiple channels, bins, staterrors
     model = pyhf.Workspace(example_spec_multibin).model()
-    parameters = np.asarray([0.9, 1.05, 1.3, 0.95])
-    uncertainty = np.asarray([0.1, 0.05, 0.3, 0.1])
-    corr_mat = np.asarray(
+    parameters = jnp.asarray([0.9, 1.05, 1.3, 0.95])
+    uncertainty = jnp.asarray([0.1, 0.05, 0.3, 0.1])
+    corr_mat = jnp.asarray(
         [
             [1.0, 0.1, 0.2, 0.1],
             [0.1, 1.0, 0.2, 0.3],
@@ -143,8 +143,8 @@ def test_calculate_stdev(example_spec, example_spec_multibin):
     expected_stdev_bin = [[8.056054, 1.670629], [2.775377]]
     expected_stdev_chan = [9.585327, 2.775377]
     for i_reg in range(2):
-        assert np.allclose(total_stdev_bin[i_reg], expected_stdev_bin[i_reg])
-        assert np.allclose(total_stdev_chan[i_reg], expected_stdev_chan[i_reg])
+        assert jnp.allclose(total_stdev_bin[i_reg], expected_stdev_bin[i_reg])
+        assert jnp.allclose(total_stdev_chan[i_reg], expected_stdev_chan[i_reg])
 
 
 def test_unconstrained_parameter_count(example_spec, example_spec_shapefactor):

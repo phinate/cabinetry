@@ -2,13 +2,12 @@ import logging
 from typing import Dict, List, NamedTuple, Optional, Tuple, Union
 
 import iminuit
-import numpy as np
+import jax.numpy as jnp
 import pyhf
 import scipy.optimize
 import scipy.stats
 
 from . import model_utils
-
 
 log = logging.getLogger(__name__)
 
@@ -20,15 +19,15 @@ class FitResults(NamedTuple):
         bestfit (numpy.ndarray): best-fit results of parameters
         uncertainty (numpy.ndarray): uncertainties of best-fit parameter results
         labels (List[str]): parameter labels
-        corr_mat (np.ndarray): parameter correlation matrix
+        corr_mat (jnp.ndarray): parameter correlation matrix
         best_twice_nll (float): -2 log(likelihood) at best-fit point
         goodess_of_fit (float, optional): goodness-of-fit p-value, defaults to -1
     """
 
-    bestfit: np.ndarray
-    uncertainty: np.ndarray
+    bestfit: jnp.ndarray
+    uncertainty: jnp.ndarray
     labels: List[str]
-    corr_mat: np.ndarray
+    corr_mat: jnp.ndarray
     best_twice_nll: float
     goodness_of_fit: float = -1
 
@@ -49,13 +48,13 @@ class RankingResults(NamedTuple):
         postfit_down (numpy.ndarray): post-fit impact in "down" direction
     """
 
-    bestfit: np.ndarray
-    uncertainty: np.ndarray
+    bestfit: jnp.ndarray
+    uncertainty: jnp.ndarray
     labels: List[str]
-    prefit_up: np.ndarray
-    prefit_down: np.ndarray
-    postfit_up: np.ndarray
-    postfit_down: np.ndarray
+    prefit_up: jnp.ndarray
+    prefit_down: jnp.ndarray
+    postfit_up: jnp.ndarray
+    postfit_down: jnp.ndarray
 
 
 class ScanResults(NamedTuple):
@@ -65,33 +64,33 @@ class ScanResults(NamedTuple):
         name (str): name of parameter in scan
         bestfit (float): best-fit parameter value from unconstrained fit
         uncertainty (float): uncertainty of parameter in unconstrained fit
-        parameter_values (np.ndarray): parameter values used in scan
-        delta_nlls (np.ndarray): -2 log(L) difference at each scanned point
+        parameter_values (jnp.ndarray): parameter values used in scan
+        delta_nlls (jnp.ndarray): -2 log(L) difference at each scanned point
     """
 
     name: str
     bestfit: float
     uncertainty: float
-    parameter_values: np.ndarray
-    delta_nlls: np.ndarray
+    parameter_values: jnp.ndarray
+    delta_nlls: jnp.ndarray
 
 
 class LimitResults(NamedTuple):
     """Collects parameter upper limit results in one object.
 
     Args:
-        observed_limit (np.ndarray): observed limit
-        expected_limit (np.ndarray): expected limit, including 1 and 2 sigma bands
-        observed_CLs (np.ndarray): observed CLs values
-        expected_CLs (np.ndarray): expected CLs values, including 1 and 2 sigma bands
-        poi_values (np.ndarray): POI values used in scan
+        observed_limit (jnp.ndarray): observed limit
+        expected_limit (jnp.ndarray): expected limit, including 1 and 2 sigma bands
+        observed_CLs (jnp.ndarray): observed CLs values
+        expected_CLs (jnp.ndarray): expected CLs values, including 1 and 2 sigma bands
+        poi_values (jnp.ndarray): POI values used in scan
     """
 
     observed_limit: float
-    expected_limit: np.ndarray
-    observed_CLs: np.ndarray
-    expected_CLs: np.ndarray
-    poi_values: np.ndarray
+    expected_limit: jnp.ndarray
+    observed_CLs: jnp.ndarray
+    expected_CLs: jnp.ndarray
+    poi_values: jnp.ndarray
 
 
 class SignificanceResults(NamedTuple):
@@ -170,7 +169,7 @@ def _fit_model_pyhf(
     uncertainty = result[:, 1]
     labels = model_utils.get_parameter_names(model)
     corr_mat = result_obj.hess_inv.correlation()
-    best_twice_nll = float(result_obj.fun)  # convert 0-dim np.ndarray to float
+    best_twice_nll = float(result_obj.fun)  # convert 0-dim jnp.ndarray to float
 
     fit_results = FitResults(bestfit, uncertainty, labels, corr_mat, best_twice_nll)
 
@@ -229,7 +228,7 @@ def _fit_model_custom(
     # this will cause the associated parameter uncertainties to be 0 post-fit
     step_size = [0.1 if not fix_pars[i_par] else 0.0 for i_par in range(len(init_pars))]
 
-    def twice_nll_func(pars: np.ndarray) -> float:
+    def twice_nll_func(pars: jnp.ndarray) -> float:
         twice_nll = -2 * model.logpdf(pars, data)
         return twice_nll[0]
 
@@ -250,8 +249,8 @@ def _fit_model_custom(
     m.hesse()
     log.info(f"MINUIT status:\n{m.fmin}")
 
-    bestfit = np.asarray(m.values)
-    uncertainty = np.asarray(m.errors)
+    bestfit = jnp.asarray(m.values)
+    uncertainty = jnp.asarray(m.errors)
     corr_mat = m.covariance.correlation()
     best_twice_nll = m.fval
 
@@ -391,7 +390,7 @@ def _goodness_of_fit(
             f"cannot calculate p-value: {n_dof} degrees of freedom and Delta NLL = "
             f"{delta_nll:.6f}"
         )
-        return np.nan
+        return jnp.nan
 
     p_val = scipy.stats.chi2.sf(2 * delta_nll, n_dof)
     log.info(f"p-value for goodness-of-fit test: {p_val:.2%}")
@@ -490,7 +489,7 @@ def ranking(
 
         parameter_impacts = []
         # calculate impacts: pre-fit up, pre-fit down, post-fit up, post-fit down
-        for np_val in [
+        for jnp_val in [
             fit_results.bestfit[i_par] + prefit_unc[i_par],
             fit_results.bestfit[i_par] - prefit_unc[i_par],
             fit_results.bestfit[i_par] + fit_results.uncertainty[i_par],
@@ -499,12 +498,12 @@ def ranking(
             # can skip pre-fit calculation for unconstrained parameters (their
             # pre-fit uncertainty is set to 0), and pre- and post-fit calculation
             # for fixed parameters (both uncertainties set to 0 as well)
-            if np_val == fit_results.bestfit[i_par]:
+            if jnp_val == fit_results.bestfit[i_par]:
                 log.debug(f"impact of {label} is zero, skipping fit")
                 parameter_impacts.append(0.0)
             else:
                 init_pars = init_pars_default.copy()
-                init_pars[i_par] = np_val  # set value of current nuisance parameter
+                init_pars[i_par] = jnp_val  # set value of current nuisance parameter
                 fit_results_ranking = _fit_model(
                     model,
                     data,
@@ -521,17 +520,17 @@ def ranking(
                 parameter_impacts.append(parameter_impact)
         all_impacts.append(parameter_impacts)
 
-    all_impacts_np = np.asarray(all_impacts)
-    prefit_up = all_impacts_np[:, 0]
-    prefit_down = all_impacts_np[:, 1]
-    postfit_up = all_impacts_np[:, 2]
-    postfit_down = all_impacts_np[:, 3]
+    all_impacts_jnp = jnp.asarray(all_impacts)
+    prefit_up = all_impacts_jnp[:, 0]
+    prefit_down = all_impacts_jnp[:, 1]
+    postfit_up = all_impacts_jnp[:, 2]
+    postfit_down = all_impacts_jnp[:, 3]
 
     # remove parameter of interest from bestfit / uncertainty / labels
     # such that their entries match the entries of the impacts
-    bestfit = np.delete(fit_results.bestfit, model.config.poi_index)
-    uncertainty = np.delete(fit_results.uncertainty, model.config.poi_index)
-    labels = np.delete(fit_results.labels, model.config.poi_index).tolist()
+    bestfit = jnp.delete(fit_results.bestfit, model.config.poi_index)
+    uncertainty = jnp.delete(fit_results.uncertainty, model.config.poi_index)
+    labels = jnp.delete(fit_results.labels, model.config.poi_index).tolist()
 
     ranking_results = RankingResults(
         bestfit, uncertainty, labels, prefit_up, prefit_down, postfit_up, postfit_down
@@ -590,8 +589,8 @@ def scan(
         # if no parameter range is specified, use +/-2 sigma from the MLE
         par_range = (par_mle - 2 * par_unc, par_mle + 2 * par_unc)
 
-    scan_values = np.linspace(par_range[0], par_range[1], n_steps)
-    delta_nlls = np.zeros_like(scan_values)  # holds results
+    scan_values = jnp.linspace(par_range[0], par_range[1], n_steps)
+    delta_nlls = jnp.zeros_like(scan_values)  # holds results
 
     fix_pars[par_index] = True  # hold scan parameter constant in fits
 
@@ -711,9 +710,9 @@ def limit(
                 par_bounds=par_bounds,
             )
             observed = float(results[0])  # 1 value per scan point
-            expected = np.asarray(results[1])  # 5 per point (with 1 and 2 sigma bands)
+            expected = jnp.asarray(results[1])  # 5 per point (with 1 and 2 sigma bands)
             cache_CLs.update({poi: (observed, expected)})
-        current_CLs = np.hstack((observed, expected))[which_limit]
+        current_CLs = jnp.hstack((observed, expected))[which_limit]
         log.debug(
             f"{model.config.poi_name} = {poi:.4f}, {limit_label} CLs = "
             f"{current_CLs:.4f}{' (cached)' if cache else ''}"
@@ -768,27 +767,27 @@ def limit(
         # determine the starting bracket for the next limit calculation
         if i_limit < 5:
             # expected CLs values for next limit type that have been calculated already
-            exp_CLs_next = np.asarray([exp[i_limit] for _, exp in cache_CLs.values()])
+            exp_CLs_next = jnp.asarray([exp[i_limit] for _, exp in cache_CLs.values()])
             # associated POI values
-            poi_arr = np.fromiter(cache_CLs.keys(), dtype=float)
+            poi_arr = jnp.fromiter(cache_CLs.keys(), dtype=float)
 
             # left: CLs has to be > 0.05, mask out values where CLs <= 0.05
-            masked_CLs_left = np.where(exp_CLs_next <= 0.05, 1, exp_CLs_next)
+            masked_CLs_left = jnp.where(exp_CLs_next <= 0.05, 1, exp_CLs_next)
             if sum(masked_CLs_left != 1) == 0:
                 # all values are below 0.05, pick default lower bound
                 bracket_left = bracket_left_default
             else:
                 # find closest to CLs = 0.05 from above
-                bracket_left = poi_arr[np.argmin(masked_CLs_left)]
+                bracket_left = poi_arr[jnp.argmin(masked_CLs_left)]
 
             # right: CLs has to be < 0.05, mask out values where CLs >= 0.05
-            masked_CLs_right = np.where(exp_CLs_next >= 0.05, -1, exp_CLs_next)
+            masked_CLs_right = jnp.where(exp_CLs_next >= 0.05, -1, exp_CLs_next)
             if sum(masked_CLs_right != -1) == 0:
                 # all values are above 0.05, pick default upper bound
                 bracket_right = bracket_right_default
             else:
                 # find closest to CLs=0.05 from below
-                bracket_right = poi_arr[np.argmax(masked_CLs_right)]
+                bracket_right = poi_arr[jnp.argmax(masked_CLs_right)]
 
             bracket = (bracket_left, bracket_right)
 
@@ -801,17 +800,21 @@ def limit(
         log.info(f"{limit_label.ljust(17)}: {all_limits[i_limit]:.4f}")
 
     # sort all CLs values and scanned POI points by increasing POI value
-    poi_arr = np.fromiter(cache_CLs.keys(), dtype=float)
-    sorted_indices = np.argsort(poi_arr)
-    observed_CLs_np = np.asarray([obs for obs, _ in cache_CLs.values()])[sorted_indices]
-    expected_CLs_np = np.asarray([exp for _, exp in cache_CLs.values()])[sorted_indices]
+    poi_arr = jnp.fromiter(cache_CLs.keys(), dtype=float)
+    sorted_indices = jnp.argsort(poi_arr)
+    observed_CLs_jnp = jnp.asarray([obs for obs, _ in cache_CLs.values()])[
+        sorted_indices
+    ]
+    expected_CLs_jnp = jnp.asarray([exp for _, exp in cache_CLs.values()])[
+        sorted_indices
+    ]
     poi_arr = poi_arr[sorted_indices]
 
     limit_results = LimitResults(
         all_limits[0],
-        np.asarray(all_limits[1:]),
-        observed_CLs_np,
-        expected_CLs_np,
+        jnp.asarray(all_limits[1:]),
+        observed_CLs_jnp,
+        expected_CLs_jnp,
         poi_arr,
     )
     return limit_results

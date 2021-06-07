@@ -1,7 +1,7 @@
 import logging
 
 import boost_histogram as bh
-import numpy as np
+import jax.numpy as jnp
 import pytest
 
 from cabinetry import histo
@@ -68,9 +68,9 @@ def example_histograms():
 class HistogramHelpers:
     @staticmethod
     def assert_equal(h1, h2):
-        assert np.allclose(h1.yields, h2.yields)
-        assert np.allclose(h1.stdev, h2.stdev)
-        assert np.allclose(h1.bins, h2.bins)
+        assert jnp.allclose(h1.yields, h2.yields)
+        assert jnp.allclose(h1.stdev, h2.stdev)
+        assert jnp.allclose(h1.bins, h2.bins)
 
 
 @pytest.fixture
@@ -82,25 +82,25 @@ def histogram_helpers():
 def test_Histogram(example_histograms):
     bins, yields, stdev = example_histograms.normal()
     h_orig = bh.Histogram(bh.axis.Variable(bins), storage=bh.storage.Weight())
-    h_orig[...] = np.stack([np.asarray(yields), np.asarray(stdev) ** 2], axis=-1)
+    h_orig[...] = jnp.stack([jnp.asarray(yields), jnp.asarray(stdev) ** 2], axis=-1)
     h = histo.Histogram(h_orig)
-    np.testing.assert_equal(h.bins, bins)
-    np.testing.assert_equal(h.yields, yields)
-    np.testing.assert_equal(h.stdev, stdev)
-    new_yields = np.asarray([3, 4])
-    new_stdev = np.asarray([0.5, 0.5])
+    jnp.testing.assert_equal(h.bins, bins)
+    jnp.testing.assert_equal(h.yields, yields)
+    jnp.testing.assert_equal(h.stdev, stdev)
+    new_yields = jnp.asarray([3, 4])
+    new_stdev = jnp.asarray([0.5, 0.5])
     h.yields = new_yields
     h.stdev = new_stdev
-    np.testing.assert_equal(h.yields, new_yields)
-    np.testing.assert_equal(h.stdev, new_stdev)
+    jnp.testing.assert_equal(h.yields, new_yields)
+    jnp.testing.assert_equal(h.stdev, new_stdev)
 
 
 def test_Histogram_from_arrays(example_histograms):
     bins, yields, stdev = example_histograms.normal()
     h = histo.Histogram.from_arrays(bins, yields, stdev)
-    assert np.allclose(h.yields, yields)
-    assert np.allclose(h.stdev, stdev)
-    assert np.allclose(h.bins, bins)
+    assert jnp.allclose(h.yields, yields)
+    assert jnp.allclose(h.stdev, stdev)
+    assert jnp.allclose(h.bins, bins)
 
     with pytest.raises(ValueError, match="bin edges need one more entry than yields"):
         histo.Histogram.from_arrays(*example_histograms.wrong_bin_number())
@@ -214,8 +214,8 @@ def test_Histogram_normalize_to_yield(example_histograms):
     var_hist = histo.Histogram.from_arrays(*example_histograms.normal())
     factor = var_hist.normalize_to_yield(hist)
     assert factor == 3.0
-    np.testing.assert_equal(var_hist.yields, np.asarray([1 / 3, 2 / 3]))
-    assert np.allclose(var_hist.stdev, np.asarray([0.1 / 3, 0.2 / 3]))
+    jnp.testing.assert_equal(var_hist.yields, jnp.asarray([1 / 3, 2 / 3]))
+    assert jnp.allclose(var_hist.stdev, jnp.asarray([0.1 / 3, 0.2 / 3]))
 
 
 def test_build_name():

@@ -3,7 +3,7 @@ import logging
 from unittest import mock
 
 import boost_histogram as bh
-import numpy as np
+import jax.numpy as jnp
 import pytest
 
 from cabinetry import route
@@ -16,9 +16,9 @@ class ProcessorExamples:
             reg: dict, sam: dict, sys: dict, tem: str
         ) -> bh.Histogram:
             hist = bh.Histogram(bh.axis.Variable([0, 1]), storage=bh.storage.Weight())
-            yields = np.asarray([2])
-            stdev = np.asarray([0.1])
-            hist[...] = np.stack([yields, stdev ** 2], axis=-1)
+            yields = jnp.asarray([2])
+            stdev = jnp.asarray([0.1])
+            hist[...] = jnp.stack([yields, stdev ** 2], axis=-1)
             return hist
 
         return example_template_builder

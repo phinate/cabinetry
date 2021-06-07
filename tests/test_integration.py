@@ -1,6 +1,6 @@
 import logging
 
-import numpy as np
+import jax.numpy as jnp
 import pytest
 
 import cabinetry
@@ -141,11 +141,11 @@ def test_integration(tmp_path, ntuple_creator, caplog):
             1.0,
         ],
     ]
-    assert np.allclose(fit_results.bestfit, bestfit_expected)
-    assert np.allclose(fit_results.uncertainty, uncertainty_expected, atol=2e-5)
-    assert np.allclose(fit_results.best_twice_nll, best_twice_nll_expected)
-    assert np.allclose(fit_results.corr_mat, corr_mat_expected, rtol=1e-4, atol=5e-5)
-    assert np.allclose(fit_results.goodness_of_fit, 0.24679341)
+    assert jnp.allclose(fit_results.bestfit, bestfit_expected)
+    assert jnp.allclose(fit_results.uncertainty, uncertainty_expected, atol=2e-5)
+    assert jnp.allclose(fit_results.best_twice_nll, best_twice_nll_expected)
+    assert jnp.allclose(fit_results.corr_mat, corr_mat_expected, rtol=1e-4, atol=5e-5)
+    assert jnp.allclose(fit_results.goodness_of_fit, 0.24679341)
 
     # minos result
     assert "Signal_norm                    =  1.6895 -0.9580 +0.9052" in [
@@ -174,7 +174,7 @@ def test_integration(tmp_path, ntuple_creator, caplog):
     ranking_results = cabinetry.fit.ranking(
         model, data, fit_results=fit_results, custom_fit=True
     )
-    assert np.allclose(
+    assert jnp.allclose(
         ranking_results.prefit_up,
         [
             -0.10787925,
@@ -186,7 +186,7 @@ def test_integration(tmp_path, ntuple_creator, caplog):
             -1.51712811,
         ],
     )
-    assert np.allclose(
+    assert jnp.allclose(
         ranking_results.prefit_down,
         [
             0.10910502,
@@ -198,7 +198,7 @@ def test_integration(tmp_path, ntuple_creator, caplog):
             1.15025176,
         ],
     )
-    assert np.allclose(
+    assert jnp.allclose(
         ranking_results.postfit_up,
         [
             -0.10503361,
@@ -211,7 +211,7 @@ def test_integration(tmp_path, ntuple_creator, caplog):
         ],
         atol=2e-5,
     )
-    assert np.allclose(
+    assert jnp.allclose(
         ranking_results.postfit_down,
         [
             0.10604551,
@@ -235,14 +235,14 @@ def test_integration(tmp_path, ntuple_creator, caplog):
         custom_fit=True,
     )
     # lower edge of scan is beyond normalization factor bounds specified in workspace
-    assert np.allclose(
+    assert jnp.allclose(
         scan_results.delta_nlls, [0.27153966, 0.0, 0.29018620], atol=5e-5
     )
 
     # upper limit, this calculation is slow
     limit_results = cabinetry.fit.limit(model, data, bracket=(0.5, 3.5), tolerance=0.05)
-    assert np.allclose(limit_results.observed_limit, 3.1502, rtol=1e-2)
-    assert np.allclose(
+    assert jnp.allclose(limit_results.observed_limit, 3.1502, rtol=1e-2)
+    assert jnp.allclose(
         limit_results.expected_limit,
         [1.0054, 1.3975, 1.9689, 2.7174, 3.5426],
         rtol=1e-2,
@@ -250,7 +250,7 @@ def test_integration(tmp_path, ntuple_creator, caplog):
 
     # discovery significance
     significance_results = cabinetry.fit.significance(model, data)
-    np.allclose(significance_results.observed_p_value, 0.03583662)
-    np.allclose(significance_results.observed_significance, 1.80118813)
-    np.allclose(significance_results.expected_p_value, 0.14775040)
-    np.allclose(significance_results.expected_significance, 1.04613046)
+    jnp.allclose(significance_results.observed_p_value, 0.03583662)
+    jnp.allclose(significance_results.observed_significance, 1.80118813)
+    jnp.allclose(significance_results.expected_p_value, 0.14775040)
+    jnp.allclose(significance_results.expected_significance, 1.04613046)

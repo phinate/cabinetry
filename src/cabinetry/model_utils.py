@@ -2,9 +2,8 @@ import logging
 from typing import Any, Dict, List, Tuple, Union
 
 import awkward as ak
-import numpy as np
+import jax.numpy as jnp
 import pyhf
-
 
 log = logging.getLogger(__name__)
 
@@ -81,7 +80,7 @@ def build_Asimov_data(model: pyhf.Model, with_aux: bool = True) -> List[float]:
     return asimov_data
 
 
-def get_asimov_parameters(model: pyhf.pdf.Model) -> np.ndarray:
+def get_asimov_parameters(model: pyhf.pdf.Model) -> jnp.ndarray:
     """Returns a list of Asimov parameter values for a model.
 
     For normalization factors, initial parameter settings (specified in the workspace)
@@ -91,7 +90,7 @@ def get_asimov_parameters(model: pyhf.pdf.Model) -> np.ndarray:
         model (pyhf.pdf.Model): model for which to extract the parameters
 
     Returns:
-        np.ndarray: the Asimov parameters, in the same order as
+        jnp.ndarray: the Asimov parameters, in the same order as
         ``model.config.suggested_init()``
     """
     # create a list of parameter names, one entry per single parameter
@@ -117,10 +116,10 @@ def get_asimov_parameters(model: pyhf.pdf.Model) -> np.ndarray:
             inits = model.config.param_set(parameter).suggested_init
         asimov_parameters += inits
 
-    return np.asarray(asimov_parameters)
+    return jnp.asarray(asimov_parameters)
 
 
-def get_prefit_uncertainties(model: pyhf.pdf.Model) -> np.ndarray:
+def get_prefit_uncertainties(model: pyhf.pdf.Model) -> jnp.ndarray:
     """Returns a list of pre-fit parameter uncertainties for a model.
 
     For unconstrained parameters the uncertainty is set to 0. It is also set to 0 for
@@ -130,7 +129,7 @@ def get_prefit_uncertainties(model: pyhf.pdf.Model) -> np.ndarray:
         model (pyhf.pdf.Model): model for which to extract the parameters
 
     Returns:
-        np.ndarray: pre-fit uncertainties for the parameters, in the same order as
+        jnp.ndarray: pre-fit uncertainties for the parameters, in the same order as
         ``model.config.suggested_init()``
     """
     pre_fit_unc = []  # pre-fit uncertainties for parameters
@@ -148,7 +147,7 @@ def get_prefit_uncertainties(model: pyhf.pdf.Model) -> np.ndarray:
             else:
                 # shapefactor
                 pre_fit_unc += [0.0] * model.config.param_set(parameter).n_parameters
-    return np.asarray(pre_fit_unc)
+    return jnp.asarray(pre_fit_unc)
 
 
 def _get_channel_boundary_indices(model: pyhf.pdf.Model) -> List[int]:
@@ -175,9 +174,9 @@ def _get_channel_boundary_indices(model: pyhf.pdf.Model) -> List[int]:
 
 def calculate_stdev(
     model: pyhf.pdf.Model,
-    parameters: np.ndarray,
-    uncertainty: np.ndarray,
-    corr_mat: np.ndarray,
+    parameters: jnp.ndarray,
+    uncertainty: jnp.ndarray,
+    corr_mat: jnp.ndarray,
 ) -> Tuple[List[List[float]], List[float]]:
     """Calculates symmetrized yield standard deviation of a model, per bin and channel.
 
@@ -189,9 +188,9 @@ def calculate_stdev(
     Args:
         model (pyhf.pdf.Model): the model for which to calculate the standard deviations
             for all bins
-        parameters (np.ndarray): central values of model parameters
-        uncertainty (np.ndarray): uncertainty of model parameters
-        corr_mat (np.ndarray): correlation matrix
+        parameters (jnp.ndarray): central values of model parameters
+        uncertainty (jnp.ndarray): uncertainty of model parameters
+        corr_mat (jnp.ndarray): correlation matrix
 
     Returns:
         Tuple[List[List[float]], List[float]]:
@@ -221,16 +220,16 @@ def calculate_stdev(
 
         # total model distribution with this parameter varied up
         up_combined = model.expected_data(up_pars, include_auxdata=False)
-        up_yields = np.split(up_combined, region_split_indices)
+        up_yields = jnp.split(up_combined, region_split_indices)
         # append list of yields summed per channel
-        up_yields += [np.asarray([sum(chan_yields)]) for chan_yields in up_yields]
+        up_yields += [jnp.asarray([sum(chan_yields)]) for chan_yields in up_yields]
         up_variations.append(up_yields)
 
         # total model distribution with this parameter varied down
         down_combined = model.expected_data(down_pars, include_auxdata=False)
-        down_yields = np.split(down_combined, region_split_indices)
+        down_yields = jnp.split(down_combined, region_split_indices)
         # append list of yields summed per channel
-        down_yields += [np.asarray([sum(chan_yields)]) for chan_yields in down_yields]
+        down_yields += [jnp.asarray([sum(chan_yields)]) for chan_yields in down_yields]
         down_variations.append(down_yields)
 
     # convert to awkward arrays for further processing
@@ -240,10 +239,10 @@ def calculate_stdev(
     # total variance, indices are: channel, bin
     n_channels = len(model.config.channels)
     total_variance_list = [
-        np.zeros(model.config.channel_nbins[ch]) for ch in model.config.channels
+        jnp.zeros(model.config.channel_nbins[ch]) for ch in model.config.channels
     ]  # list of arrays, each array has as many entries as there are bins
     # append placeholders for total yield uncertainty per channel
-    total_variance_list += [np.asarray([0]) for _ in range(n_channels)]
+    total_variance_list += [jnp.asarray([0]) for _ in range(n_channels)]
     total_variance = ak.from_iter(total_variance_list)
 
     # loop over parameters to sum up total variance
@@ -254,7 +253,7 @@ def calculate_stdev(
 
     labels = get_parameter_names(model)
     # continue with off-diagonal contributions if there are any
-    if np.count_nonzero(corr_mat - np.diag(np.ones_like(parameters))) > 0:
+    if jnp.count_nonzero(corr_mat - jnp.diag(jnp.ones_like(parameters))) > 0:
         # loop over pairs of parameters
         for i_par in range(model.config.npars):
             for j_par in range(model.config.npars):
@@ -274,8 +273,8 @@ def calculate_stdev(
                 total_variance = total_variance + 2 * (corr * sym_unc_i * sym_unc_j)
 
     # convert to standard deviations per bin and per channel
-    total_stdev_per_bin = np.sqrt(total_variance[:n_channels])
-    total_stdev_per_channel = ak.flatten(np.sqrt(total_variance[n_channels:]))
+    total_stdev_per_bin = jnp.sqrt(total_variance[:n_channels])
+    total_stdev_per_channel = ak.flatten(jnp.sqrt(total_variance[n_channels:]))
     log.debug(f"total stdev is {total_stdev_per_bin}")
     log.debug(f"total stdev per channel is {total_stdev_per_channel}")
     return ak.to_list(total_stdev_per_bin), ak.to_list(total_stdev_per_channel)

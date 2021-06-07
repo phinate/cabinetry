@@ -4,16 +4,10 @@ import pathlib
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import awkward as ak
-import numpy as np
+import jax.numpy as jnp
 import pyhf
 
-from . import configuration
-from . import fit
-from . import histo
-from . import model_utils
-from . import tabulate
-from . import template_builder
-
+from . import configuration, fit, histo, model_utils, tabulate, template_builder
 
 log = logging.getLogger(__name__)
 
@@ -37,16 +31,16 @@ def _build_figure_name(region_name: str, is_prefit: bool) -> str:
     return figure_name
 
 
-def _total_yield_uncertainty(stdev_list: List[np.ndarray]) -> np.ndarray:
+def _total_yield_uncertainty(stdev_list: List[jnp.ndarray]) -> jnp.ndarray:
     """Calculates the absolute statistical uncertainty of a stack of MC.
 
     Args:
-        stdev_list (List[np.ndarray]): list of absolute stat. uncertainty per sample
+        stdev_list (List[jnp.ndarray]): list of absolute stat. uncertainty per sample
 
     Returns:
-        np.array: absolute stat. uncertainty of stack of samples
+        jnp.array: absolute stat. uncertainty of stack of samples
     """
-    tot_unc = np.sqrt(np.sum(np.power(np.asarray(stdev_list), 2), axis=0))
+    tot_unc = jnp.sqrt(jnp.sum(jnp.power(jnp.asarray(stdev_list), 2), axis=0))
     return tot_unc
 
 
@@ -178,8 +172,8 @@ def data_MC(
         # use pre-fit parameter values, uncertainties, and diagonal correlation matrix
         param_values = model_utils.get_asimov_parameters(model)
         param_uncertainty = model_utils.get_prefit_uncertainties(model)
-        corr_mat = np.zeros(shape=(len(param_values), len(param_values)))
-        np.fill_diagonal(corr_mat, 1.0)
+        corr_mat = jnp.zeros(shape=(len(param_values), len(param_values)))
+        jnp.fill_diagonal(corr_mat, 1.0)
 
     yields_combined = model.main_model.expected_data(
         param_values, return_by_sample=True
@@ -189,10 +183,10 @@ def data_MC(
     # second index is sample (and third index is bin)
     region_split_indices = model_utils._get_channel_boundary_indices(model)
     model_yields = [
-        m.tolist() for m in np.split(yields_combined, region_split_indices, axis=1)
+        m.tolist() for m in jnp.split(yields_combined, region_split_indices, axis=1)
     ]
     # data is only indexed by channel (and bin)
-    data_yields = [d.tolist() for d in np.split(data_combined, region_split_indices)]
+    data_yields = [d.tolist() for d in jnp.split(data_combined, region_split_indices)]
 
     # calculate the total standard deviation of the model prediction
     # indices: channel (and bin) for per-bin uncertainties, channel for per-channel
@@ -211,7 +205,7 @@ def data_MC(
         )
 
         # yields per channel
-        model_yields_per_channel = np.sum(ak.from_iter(model_yields), axis=-1).tolist()
+        model_yields_per_channel = jnp.sum(ak.from_iter(model_yields), axis=-1).tolist()
         data_per_channel = [sum(d) for d in data_yields]
         tabulate._yields_per_channel(
             model,
@@ -231,7 +225,7 @@ def data_MC(
             variable = region_dict["Variable"]
         else:
             # fall back to defaults
-            bin_edges = np.arange(len(data_yields[i_chan]) + 1)
+            bin_edges = jnp.arange(len(data_yields[i_chan]) + 1)
             variable = "bin"
 
         for i_sam, sample_name in enumerate(model.config.samples):
@@ -267,7 +261,7 @@ def data_MC(
                 )
             matplotlib_visualize.data_MC(
                 histogram_dict_list,
-                np.asarray(total_stdev_model_bins[i_chan]),
+                jnp.asarray(total_stdev_model_bins[i_chan]),
                 bin_edges,
                 figure_path,
                 log_scale=log_scale,
@@ -299,24 +293,24 @@ def correlation_matrix(
     """
     # create a matrix that is True if a correlation is below threshold, and True on the
     # diagonal
-    below_threshold = np.where(
-        np.abs(fit_results.corr_mat) < pruning_threshold, True, False
+    below_threshold = jnp.where(
+        jnp.abs(fit_results.corr_mat) < pruning_threshold, True, False
     )
-    np.fill_diagonal(below_threshold, True)
+    jnp.fill_diagonal(below_threshold, True)
     # get list of booleans specifying if everything in rows/columns is below threshold
-    all_below_threshold = np.all(below_threshold, axis=0)
+    all_below_threshold = jnp.all(below_threshold, axis=0)
     # get list of booleans specifying if rows/columns correspond to fixed parameter
     # (0 correlations)
-    fixed_parameter = np.all(np.equal(fit_results.corr_mat, 0.0), axis=0)
+    fixed_parameter = jnp.all(jnp.equal(fit_results.corr_mat, 0.0), axis=0)
     # get indices of rows/columns where everything is below threshold, or the parameter
     # is fixed
-    delete_indices = np.where(np.logical_or(all_below_threshold, fixed_parameter))
+    delete_indices = jnp.where(jnp.logical_or(all_below_threshold, fixed_parameter))
     # delete rows and columns where all correlations are below threshold / parameter is
     # fixed
-    corr_mat = np.delete(
-        np.delete(fit_results.corr_mat, delete_indices, axis=1), delete_indices, axis=0
+    corr_mat = jnp.delete(
+        jnp.delete(fit_results.corr_mat, delete_indices, axis=1), delete_indices, axis=0
     )
-    labels = np.delete(fit_results.labels, delete_indices)
+    labels = jnp.delete(fit_results.labels, delete_indices)
 
     figure_path = pathlib.Path(figure_folder) / "correlation_matrix.pdf"
     if method == "matplotlib":
@@ -348,7 +342,7 @@ def pulls(
         NotImplementedError: when trying to plot with a method that is not supported
     """
     figure_path = pathlib.Path(figure_folder) / "pulls.pdf"
-    labels_np = np.asarray(fit_results.labels)
+    labels_jnp = jnp.asarray(fit_results.labels)
 
     if exclude is None:
         exclude_set = set()
@@ -361,24 +355,24 @@ def pulls(
     exclude_set.update(
         [
             label
-            for i_np, label in enumerate(labels_np)
-            if fit_results.uncertainty[i_np] == 0.0
+            for i_jnp, label in enumerate(labels_jnp)
+            if fit_results.uncertainty[i_jnp] == 0.0
         ]
     )
 
     # exclude staterror parameters from pull plot (they are centered at 1)
-    exclude_set.update([label for label in labels_np if label[0:10] == "staterror_"])
+    exclude_set.update([label for label in labels_jnp if label[0:10] == "staterror_"])
 
     # filter out user-specified parameters
-    mask = [True if label not in exclude_set else False for label in labels_np]
+    mask = [True if label not in exclude_set else False for label in labels_jnp]
     bestfit = fit_results.bestfit[mask]
     uncertainty = fit_results.uncertainty[mask]
-    labels_np = labels_np[mask]
+    labels_jnp = labels_jnp[mask]
 
     if method == "matplotlib":
         from .contrib import matplotlib_visualize
 
-        matplotlib_visualize.pulls(bestfit, uncertainty, labels_np, figure_path)
+        matplotlib_visualize.pulls(bestfit, uncertainty, labels_jnp, figure_path)
     else:
         raise NotImplementedError(f"unknown backend: {method}")
 
@@ -406,14 +400,14 @@ def ranking(
 
     # sort parameters by decreasing average post-fit impact
     avg_postfit_impact = (
-        np.abs(ranking_results.postfit_up) + np.abs(ranking_results.postfit_down)
+        jnp.abs(ranking_results.postfit_up) + jnp.abs(ranking_results.postfit_down)
     ) / 2
 
     # get indices to sort by decreasing impact
-    sorted_indices = np.argsort(avg_postfit_impact)[::-1]
+    sorted_indices = jnp.argsort(avg_postfit_impact)[::-1]
     bestfit = ranking_results.bestfit[sorted_indices]
     uncertainty = ranking_results.uncertainty[sorted_indices]
-    labels = np.asarray(ranking_results.labels)[sorted_indices]  # labels are list
+    labels = jnp.asarray(ranking_results.labels)[sorted_indices]  # labels are list
     prefit_up = ranking_results.prefit_up[sorted_indices]
     prefit_down = ranking_results.prefit_down[sorted_indices]
     postfit_up = ranking_results.postfit_up[sorted_indices]

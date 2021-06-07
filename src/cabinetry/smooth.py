@@ -2,21 +2,20 @@ import logging
 import statistics
 from typing import List, TypeVar, Union
 
-import numpy as np
-
+import jax.numpy as jnp
 
 log = logging.getLogger(__name__)
 
 
 # typeguard raises errors in tests when using List[float] instead of list
-T = TypeVar("T", list, np.ndarray)
+T = TypeVar("T", list, jnp.ndarray)
 
 
-def _medians_353(zz: Union[List[float], np.ndarray], nbins: int) -> None:
+def _medians_353(zz: Union[List[float], jnp.ndarray], nbins: int) -> None:
     """Applies running median smoothing with window sizes 3, 5, 3 to input.
 
     Args:
-        zz (Union[List[float], np.ndarray]): array to smooth
+        zz (Union[List[float], jnp.ndarray]): array to smooth
         nbins (int): number of bins in array
     """
     for i_median in range(3):
@@ -50,21 +49,21 @@ def smooth_353QH_twice(hist: T) -> T:
     the ROOT implementation.
 
     Args:
-        hist (Union[list, np.ndarray]): array to smooth
+        hist (Union[list, jnp.ndarray]): array to smooth
 
     Returns:
-        Union[list, np.ndarray]: smooth version of input
+        Union[list, jnp.ndarray]: smooth version of input
     """
     nbins = len(hist)
     if nbins < 3:
         log.warning("at least three points needed for smoothing, no smoothing applied")
         return hist
 
-    if isinstance(hist, np.ndarray):
+    if isinstance(hist, jnp.ndarray):
         # ensure dtype is not int to avoid rounding in smooth histogram
         hist = hist.astype("float")
 
-    zz = np.array(hist, dtype=float, copy=True)
+    zz = jnp.array(hist, dtype=float, copy=True)
 
     for i_353QH in range(2):  # run 353QH twice
         # do running median with window sizes 3, 5, 3
@@ -96,7 +95,7 @@ def smooth_353QH_twice(hist: T) -> T:
             # algorithm has been run once
             rr = zz.copy()  # save computed values
             # calculate residuals: (original) - (after 353QH)
-            zz = np.asarray([hist[ii] - zz[ii] for ii in range(0, nbins)])
+            zz = jnp.asarray([hist[ii] - zz[ii] for ii in range(0, nbins)])
             # zz is now "rough", while rr is "smooth"
 
         # "twicing": run 353QH again on "rough" zz and add to "smooth" rr

@@ -4,12 +4,9 @@ import pathlib
 from typing import Any, Dict, List, Optional, Union
 
 import boost_histogram as bh
-import numpy as np
+import jax.numpy as jnp
 
-from . import configuration
-from . import histo
-from . import route
-
+from . import configuration, histo, route
 
 log = logging.getLogger(__name__)
 
@@ -63,13 +60,13 @@ def _get_ntuple_paths(
         List[pathlib.Path]: list of paths to ntuples
     """
     # obtain region and sample paths, if they are defined
-    region_path = region.get("RegionPath", None)
+    region_path = region.get("Regionpath", None)
     sample_paths = sample.get("SamplePaths", None)
 
     # check whether a systematic is being processed, and whether overrides exist
     if systematic.get("Name", "Nominal") != "Nominal":
-        # determine whether the template has an override for RegionPath specified
-        region_override = _check_for_override(systematic, template, "RegionPath")
+        # determine whether the template has an override for Regionpath specified
+        region_override = _check_for_override(systematic, template, "Regionpath")
         if region_override is not None:
             region_path = region_override
 
@@ -78,13 +75,13 @@ def _get_ntuple_paths(
         if sample_override is not None:
             sample_paths = sample_override
 
-    region_template_exists = "{RegionPath}" in general_path
+    region_template_exists = "{Regionpath}" in general_path
     if region_path is not None:
         if not region_template_exists:
             log.warning(
-                "region override specified, but {RegionPath} not found in default path"
+                "region override specified, but {Regionpath} not found in default path"
             )
-        general_path = general_path.replace("{RegionPath}", region_path)
+        general_path = general_path.replace("{Regionpath}", region_path)
     elif region_template_exists:
         raise ValueError(f"no path setting found for region {region['Name']}")
 
@@ -211,7 +208,7 @@ def _get_position_in_file(
     return position
 
 
-def _get_binning(region: Dict[str, Any]) -> np.ndarray:
+def _get_binning(region: Dict[str, Any]) -> jnp.ndarray:
     """Returns the binning to be used in a region.
 
     Should eventually also support other ways of specifying bins, such as the amount of
@@ -229,7 +226,7 @@ def _get_binning(region: Dict[str, Any]) -> np.ndarray:
     if not region.get("Binning", False):
         raise NotImplementedError("cannot determine binning")
 
-    return np.asarray(region["Binning"])
+    return jnp.asarray(region["Binning"])
 
 
 class _Builder:

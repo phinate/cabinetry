@@ -2,11 +2,10 @@ import logging
 import pathlib
 from unittest import mock
 
-import numpy as np
+import jax.numpy as jnp
 import pytest
 
-from cabinetry import histo
-from cabinetry import template_postprocessor
+from cabinetry import histo, template_postprocessor
 
 
 @pytest.mark.parametrize(
@@ -22,20 +21,20 @@ from cabinetry import template_postprocessor
 def test__fix_stat_unc(test_histo, fixed_stdev):
     name = "test_histo"
     template_postprocessor._fix_stat_unc(test_histo, name)
-    assert np.allclose(test_histo.stdev, fixed_stdev)
+    assert jnp.allclose(test_histo.stdev, fixed_stdev)
 
 
-@mock.patch("cabinetry.smooth.smooth_353QH_twice", return_value=np.asarray([1, 1.3]))
+@mock.patch("cabinetry.smooth.smooth_353QH_twice", return_value=jnp.asarray([1, 1.3]))
 def test__apply_353QH_twice(mock_smooth):
     var = histo.Histogram.from_arrays([1, 2, 3], [1, 1.5], [0.1, 0.1])
     nom = histo.Histogram.from_arrays([1, 2, 3], [1, 1.2], [0.1, 0.1])
 
     template_postprocessor._apply_353QH_twice(var, nom, "abc")
 
-    assert np.allclose(nom.yields, [1, 1.2])  # nominal unchanged
+    assert jnp.allclose(nom.yields, [1, 1.2])  # nominal unchanged
     # result of smoothing is [1, 1.3], multiplied by [1, 1.2] -> [1, 1.56]
     # [1, 1.56] scaled to integral 2.5 results in [0.9765625, 1.5234375]
-    assert np.allclose(var.yields, [0.9765625, 1.5234375])
+    assert jnp.allclose(var.yields, [0.9765625, 1.5234375])
 
 
 def test__get_smoothing_algorithm():
@@ -78,28 +77,30 @@ def test_apply_postprocessing(mock_stat, mock_smooth, caplog):
 
     # call to stat. unc. fix
     assert mock_stat.call_count == 1
-    assert np.allclose(mock_stat.call_args[0][0].yields, histogram.yields)
-    assert np.allclose(mock_stat.call_args[0][0].stdev, histogram.stdev, equal_nan=True)
+    assert jnp.allclose(mock_stat.call_args[0][0].yields, histogram.yields)
+    assert jnp.allclose(
+        mock_stat.call_args[0][0].stdev, histogram.stdev, equal_nan=True
+    )
     assert mock_stat.call_args[0][1] == name
     assert mock_stat.call_args[1] == {}
 
     # call to smoothing
     assert mock_smooth.call_count == 1
-    assert np.allclose(mock_smooth.call_args[0][0].yields, histogram.yields)
-    assert np.allclose(
+    assert jnp.allclose(mock_smooth.call_args[0][0].yields, histogram.yields)
+    assert jnp.allclose(
         mock_smooth.call_args[0][0].stdev, histogram.stdev, equal_nan=True
     )
-    assert np.allclose(mock_smooth.call_args[0][1].yields, nom_hist.yields)
-    assert np.allclose(mock_smooth.call_args[0][1].stdev, nom_hist.stdev)
+    assert jnp.allclose(mock_smooth.call_args[0][1].yields, nom_hist.yields)
+    assert jnp.allclose(mock_smooth.call_args[0][1].stdev, nom_hist.stdev)
     assert mock_smooth.call_args[0][2] == name
     assert mock_smooth.call_args[1] == {}
 
     # the original histogram should be unchanged
-    assert np.allclose(histogram.yields, [1, 1])
-    assert np.allclose(histogram.stdev, [float("nan"), 0.2], equal_nan=True)
+    assert jnp.allclose(histogram.yields, [1, 1])
+    assert jnp.allclose(histogram.stdev, [float("nan"), 0.2], equal_nan=True)
     # original and modified histogram should match (modifications were mocked out)
-    assert np.allclose(histogram.yields, modified_histogram.yields)
-    assert np.allclose(histogram.stdev, modified_histogram.stdev, equal_nan=True)
+    assert jnp.allclose(histogram.yields, modified_histogram.yields)
+    assert jnp.allclose(histogram.stdev, modified_histogram.stdev, equal_nan=True)
 
     # unknown smoothing algorithm
     _ = template_postprocessor.apply_postprocessing(

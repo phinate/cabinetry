@@ -2,18 +2,17 @@ import logging
 import pathlib
 from typing import Any, Dict, List, Optional, Union
 
+import jax.numpy as jnp
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import numpy as np
-
 
 log = logging.getLogger(__name__)
 
 
 def data_MC(
     histogram_dict_list: List[Dict[str, Any]],
-    total_model_unc: np.ndarray,
-    bin_edges: np.ndarray,
+    total_model_unc: jnp.ndarray,
+    bin_edges: jnp.ndarray,
     figure_path: pathlib.Path,
     log_scale: Optional[bool] = None,
     log_scale_x: bool = False,
@@ -23,9 +22,9 @@ def data_MC(
     Args:
         histogram_dict_list (List[Dict[str, Any]]): list of samples (with info stored in
             one dict per sample)
-        total_model_unc (np.ndarray): total model uncertainty, if specified this is used
-            instead of calculating it via sum in quadrature, defaults to None
-        bin_edges (np.ndarray): bin edges of histogram
+        total_model_unc (jnp.ndarray): total model uncertainty, if specified this is
+            used instead of calculating it via sum in quadrature, defaults to None
+        bin_edges (jnp.ndarray): bin edges of histogram
         figure_path (pathlib.Path): path where figure should be saved
         log_scale (Optional[bool], optional): whether to use a logarithmic vertical
             axis, defaults to None (automatically determine whether to use linear or log
@@ -38,7 +37,7 @@ def data_MC(
     for h in histogram_dict_list:
         if h["isData"]:
             data_histogram_yields = h["yields"]
-            data_histogram_stdev = np.sqrt(data_histogram_yields)
+            data_histogram_stdev = jnp.sqrt(data_histogram_yields)
             data_label = h["label"]
         else:
             mc_histograms_yields.append(h["yields"])
@@ -65,14 +64,14 @@ def data_MC(
         axis.set_minor_locator(mpl.ticker.AutoMinorLocator())
 
     # plot MC stacked together
-    total_yield = np.zeros_like(mc_histograms_yields[0])
+    total_yield = jnp.zeros_like(mc_histograms_yields[0])
     bin_right_edges = bin_edges[1:]
     bin_left_edges = bin_edges[:-1]
     bin_width = bin_right_edges - bin_left_edges
     bin_centers = 0.5 * (bin_left_edges + bin_right_edges)
     # center data visually in bins if horizontal log scale is used
     bin_centers_data = (
-        np.power(10, 0.5 * (np.log10(bin_left_edges * bin_right_edges)))
+        jnp.power(10, 0.5 * (jnp.log10(bin_left_edges * bin_right_edges)))
         if log_scale_x
         else bin_centers
     )
@@ -148,9 +147,9 @@ def data_MC(
     )
 
     # get the highest single bin yield, from the sum of MC or data
-    y_max = max(np.max(total_yield), np.max(data_histogram_yields))
+    y_max = max(jnp.max(total_yield), jnp.max(data_histogram_yields))
     # lowest MC yield in single bin (not considering empty bins)
-    y_min = np.min(total_yield[np.nonzero(total_yield)])
+    y_min = jnp.min(total_yield[jnp.nonzero(total_yield)])
 
     # use log scale if it is requested, otherwise determine scale setting:
     # if yields vary over more than 2 orders of magnitude, set y-axis to log scale
@@ -202,15 +201,15 @@ def data_MC(
 
 
 def correlation_matrix(
-    corr_mat: np.ndarray,
-    labels: Union[List[str], np.ndarray],
+    corr_mat: jnp.ndarray,
+    labels: Union[List[str], jnp.ndarray],
     figure_path: pathlib.Path,
 ) -> None:
     """Draws a correlation matrix.
 
     Args:
-        corr_mat (np.ndarray): the correlation matrix to plot
-        labels (Union[List[str], np.ndarray]): names of parameters in the correlation
+        corr_mat (jnp.ndarray): the correlation matrix to plot
+        labels (Union[List[str], jnp.ndarray]): names of parameters in the correlation
             matrix
         figure_path (pathlib.Path): path where figure should be saved
     """
@@ -221,8 +220,8 @@ def correlation_matrix(
     )
     im = ax.imshow(corr_mat, vmin=-1, vmax=1, cmap="RdBu")
 
-    ax.set_xticks(np.arange(len(labels)))
-    ax.set_yticks(np.arange(len(labels)))
+    ax.set_xticks(jnp.arange(len(labels)))
+    ax.set_yticks(jnp.arange(len(labels)))
     ax.set_xticklabels(labels)
     ax.set_yticklabels(labels)
     for tick in ax.get_xticklabels():
@@ -234,7 +233,7 @@ def correlation_matrix(
     fig.tight_layout()
 
     # add correlation as text
-    for (j, i), corr in np.ndenumerate(corr_mat):
+    for (j, i), corr in jnp.ndenumerate(corr_mat):
         text_color = "white" if abs(corr_mat[j, i]) > 0.75 else "black"
         if abs(corr) > 0.005:
             ax.text(i, j, f"{corr:.2f}", ha="center", va="center", color=text_color)
@@ -246,21 +245,21 @@ def correlation_matrix(
 
 
 def pulls(
-    bestfit: np.ndarray,
-    uncertainty: np.ndarray,
-    labels: Union[List[str], np.ndarray],
+    bestfit: jnp.ndarray,
+    uncertainty: jnp.ndarray,
+    labels: Union[List[str], jnp.ndarray],
     figure_path: pathlib.Path,
 ) -> None:
     """Draws a pull plot.
 
     Args:
-        bestfit (np.ndarray): best-fit parameter results
-        uncertainty (np.ndarray): parameter uncertainties
-        labels (Union[List[str], np.ndarray]): parameter names
+        bestfit (jnp.ndarray): best-fit parameter results
+        uncertainty (jnp.ndarray): parameter uncertainties
+        labels (Union[List[str], jnp.ndarray]): parameter names
         figure_path (pathlib.Path): path where figure should be saved
     """
     num_pars = len(bestfit)
-    y_positions = np.arange(num_pars)[::-1]
+    y_positions = jnp.arange(num_pars)[::-1]
     fig, ax = plt.subplots(figsize=(6, 1 + num_pars / 4), dpi=100)
     ax.errorbar(bestfit, y_positions, xerr=uncertainty, fmt="o", color="black")
 
@@ -285,26 +284,26 @@ def pulls(
 
 
 def ranking(
-    bestfit: np.ndarray,
-    uncertainty: np.ndarray,
-    labels: Union[List[str], np.ndarray],
-    impact_prefit_up: np.ndarray,
-    impact_prefit_down: np.ndarray,
-    impact_postfit_up: np.ndarray,
-    impact_postfit_down: np.ndarray,
+    bestfit: jnp.ndarray,
+    uncertainty: jnp.ndarray,
+    labels: Union[List[str], jnp.ndarray],
+    impact_prefit_up: jnp.ndarray,
+    impact_prefit_down: jnp.ndarray,
+    impact_postfit_up: jnp.ndarray,
+    impact_postfit_down: jnp.ndarray,
     figure_path: pathlib.Path,
 ) -> None:
     """Draws a ranking plot.
 
     Args:
-        bestfit (np.ndarray): best-fit parameter results
-        uncertainty (np.ndarray): parameter uncertainties
-        labels (Union[List[str], np.ndarray]): parameter labels
-        impact_prefit_up (np.ndarray): pre-fit impact in "up" direction per parameter
-        impact_prefit_down (np.ndarray): pre-fit impact in "down" direction per
+        bestfit (jnp.ndarray): best-fit parameter results
+        uncertainty (jnp.ndarray): parameter uncertainties
+        labels (Union[List[str], jnp.ndarray]): parameter labels
+        impact_prefit_up (jnp.ndarray): pre-fit impact in "up" direction per parameter
+        impact_prefit_down (jnp.ndarray): pre-fit impact in "down" direction per
             parameter
-        impact_postfit_up (np.ndarray): post-fit impact in "up" direction per parameter
-        impact_postfit_down (np.ndarray): post-fit impact in "down" direction per
+        impact_postfit_up (jnp.ndarray): post-fit impact in "up" direction per parameter
+        impact_postfit_down (jnp.ndarray): post-fit impact in "down" direction per
             parameter
         figure_path (pathlib.Path): path where figure should be saved
     """
@@ -340,7 +339,7 @@ def ranking(
         1, -1, num_pars - 0.5, linestyles="dashed", color="black", linewidth=0.75
     )
 
-    y_pos = np.arange(num_pars)[::-1]
+    y_pos = jnp.arange(num_pars)[::-1]
 
     # pre-fit up
     pre_up = ax_impact.barh(
@@ -364,7 +363,7 @@ def ranking(
     ax_pulls.set_ylim([-1, num_pars])
 
     # impact axis limits: need largest pre-fit impact
-    impact_max = np.max(np.abs(impact_prefit_up, impact_prefit_down))
+    impact_max = jnp.max(jnp.abs(impact_prefit_up, impact_prefit_down))
     ax_impact.set_xlim([-impact_max * 1.1, impact_max * 1.1])
 
     # minor ticks
@@ -401,12 +400,12 @@ def ranking(
 
 
 def templates(
-    nominal_histo: Dict[str, np.ndarray],
-    up_histo_orig: Dict[str, np.ndarray],
-    up_histo_mod: Dict[str, np.ndarray],
-    down_histo_orig: Dict[str, np.ndarray],
-    down_histo_mod: Dict[str, np.ndarray],
-    bin_edges: np.ndarray,
+    nominal_histo: Dict[str, jnp.ndarray],
+    up_histo_orig: Dict[str, jnp.ndarray],
+    up_histo_mod: Dict[str, jnp.ndarray],
+    down_histo_orig: Dict[str, jnp.ndarray],
+    down_histo_mod: Dict[str, jnp.ndarray],
+    bin_edges: jnp.ndarray,
     variable: str,
     figure_path: pathlib.Path,
 ) -> None:
@@ -415,12 +414,12 @@ def templates(
     If a variation template is an empty dict, it is not drawn.
 
     Args:
-        nominal_histo (Dict[str, np.ndarray]): the nominal template
-        up_histo_orig (Dict[str, np.ndarray]): original "up" variation
-        up_histo_mod (Dict[str, np.ndarray]): "up" variation after post-processing
-        down_histo_orig (Dict[str, np.ndarray]): original "down" variation
-        down_histo_mod (Dict[str, np.ndarray]): "down" variation after post-processing
-        bin_edges (np.ndarray): bin edges of histogram
+        nominal_histo (Dict[str, jnp.ndarray]): the nominal template
+        up_histo_orig (Dict[str, jnp.ndarray]): original "up" variation
+        up_histo_mod (Dict[str, jnp.ndarray]): "up" variation after post-processing
+        down_histo_orig (Dict[str, jnp.ndarray]): original "down" variation
+        down_histo_mod (Dict[str, jnp.ndarray]): "down" variation after post-processing
+        bin_edges (jnp.ndarray): bin edges of histogram
         variable (str): variable name for the horizontal axis
         figure_path (pathlib.Path): path where figure should be saved
     """
@@ -576,8 +575,8 @@ def scan(
     par_name: str,
     par_mle: float,
     par_unc: float,
-    par_vals: np.ndarray,
-    par_nlls: np.ndarray,
+    par_vals: jnp.ndarray,
+    par_nlls: jnp.ndarray,
     figure_path: pathlib.Path,
 ) -> None:
     """Draws a figure showing the results of a likelihood scan.
@@ -586,8 +585,8 @@ def scan(
         par_name (str): name of parameter used in scan
         par_mle (float): best-fit result for parameter
         par_unc (float): best-fit parameter uncertainty
-        par_vals (np.ndarray): values used in scan over parameter
-        par_nlls (np.ndarray): -2 log(L) offset at each scan point
+        par_vals (jnp.ndarray): values used in scan over parameter
+        par_nlls (jnp.ndarray): -2 log(L) offset at each scan point
         figure_path (pathlib.Path): path where figure should be saved
     """
     mpl.style.use("seaborn-colorblind")
@@ -622,7 +621,7 @@ def scan(
         )
 
     # Gaussian at best-fit parameter value for reference
-    val_grid = np.linspace(par_vals[0], par_vals[-1], 100)
+    val_grid = jnp.linspace(par_vals[0], par_vals[-1], 100)
     gaussian_approx = [((par_val - par_mle) / par_unc) ** 2 for par_val in val_grid]
     ax.plot(val_grid, gaussian_approx, "--", color="C5", label="Gaussian approximation")
 
@@ -658,17 +657,17 @@ def scan(
 
 
 def limit(
-    observed_CLs: np.ndarray,
-    expected_CLs: np.ndarray,
-    poi_values: np.ndarray,
+    observed_CLs: jnp.ndarray,
+    expected_CLs: jnp.ndarray,
+    poi_values: jnp.ndarray,
     figure_path: pathlib.Path,
 ) -> None:
     """Draws observed and expected CLs values as function of the parameter of interest.
 
     Args:
-        observed_CLs (np.ndarray): observed CLs values
-        expected_CLs (np.ndarray): expected CLs values, including 1 and 2 sigma bands
-        poi_values (np.ndarray): parameter of interest values used in scan
+        observed_CLs (jnp.ndarray): observed CLs values
+        expected_CLs (jnp.ndarray): expected CLs values, including 1 and 2 sigma bands
+        poi_values (jnp.ndarray): parameter of interest values used in scan
         figure_path (pathlib.Path): path where figure should be saved
     """
     fig, ax = plt.subplots()

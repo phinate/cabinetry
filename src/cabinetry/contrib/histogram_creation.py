@@ -3,7 +3,7 @@ from typing import List, Optional, Tuple
 
 import awkward as ak
 import boost_histogram as bh
-import numpy as np
+import jax.numpy as jnp
 import uproot
 
 
@@ -11,10 +11,10 @@ def from_uproot(
     ntuple_paths: List[pathlib.Path],
     pos_in_file: str,
     variable: str,
-    bins: np.ndarray,
+    bins: jnp.ndarray,
     weight: Optional[str] = None,
     selection_filter: Optional[str] = None,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> Tuple[jnp.ndarray, jnp.ndarray]:
     """Reads an ntuple with uproot, and fills a histogram with the observable.
 
     The paths may contain wildcards.
@@ -30,7 +30,7 @@ def from_uproot(
             defaults to None (no filter)
 
     Returns:
-        Tuple[np.ndarray, np.ndarray]:
+        Tuple[jnp.ndarray, jnp.ndarray]:
             - yield per bin
             - stat. uncertainty per bin
     """
@@ -63,8 +63,8 @@ def from_uproot(
         for arr in array_generator:
             obs_list.append(ak.to_numpy(arr[variable]))
             weight_list.append(ak.to_numpy(arr[weight]))
-        observables = np.concatenate(obs_list)
-        weights = np.concatenate(weight_list)
+        observables = jnp.concatenate(obs_list)
+        weights = jnp.concatenate(weight_list)
 
     else:
         # only need to read the observables
@@ -76,16 +76,16 @@ def from_uproot(
         obs_list = []
         for arr in array_generator:
             obs_list.append(ak.to_numpy(arr[variable]))
-        observables = np.concatenate(obs_list)
-        weights = np.ones_like(observables) * float(weight)
+        observables = jnp.concatenate(obs_list)
+        weights = jnp.ones_like(observables) * float(weight)
 
     yields, stdev = _bin_data(observables, weights, bins)
     return yields, stdev
 
 
 def _bin_data(
-    observables: np.ndarray, weights: np.ndarray, bins: np.ndarray
-) -> Tuple[np.ndarray, np.ndarray]:
+    observables: jnp.ndarray, weights: jnp.ndarray, bins: jnp.ndarray
+) -> Tuple[jnp.ndarray, jnp.ndarray]:
     """Creates a histogram from unbinned data.
 
     Args:
@@ -94,12 +94,12 @@ def _bin_data(
         bins (numpy.ndarray): bin edges for histogram
 
     Returns:
-        Tuple[np.ndarray, np.ndarray]:
+        Tuple[jnp.ndarray, jnp.ndarray]:
             - yield per bin
             - stat. uncertainty per bin
     """
     hist = bh.Histogram(bh.axis.Variable(bins), storage=bh.storage.Weight())
     hist.fill(observables, weight=weights)
     yields = hist.values()
-    stdev = np.sqrt(hist.variances())  # type: ignore
+    stdev = jnp.sqrt(hist.variances())  # type: ignore
     return yields, stdev

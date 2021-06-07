@@ -3,78 +3,77 @@ import re
 from unittest import mock
 
 import iminuit
-import numpy as np
+import jax.numpy as jnp
 import pytest
 
-from cabinetry import fit
-from cabinetry import model_utils
+from cabinetry import fit, model_utils
 
 
 def test_FitResults():
-    bestfit = np.asarray([1.0])
-    uncertainty = np.asarray([0.1])
+    bestfit = jnp.asarray([1.0])
+    uncertainty = jnp.asarray([0.1])
     labels = ["par_a"]
-    corr_mat = np.asarray([[1.0]])
+    corr_mat = jnp.asarray([[1.0]])
     best_twice_nll = 2.0
     fit_results = fit.FitResults(bestfit, uncertainty, labels, corr_mat, best_twice_nll)
-    assert np.allclose(fit_results.bestfit, bestfit)
-    assert np.allclose(fit_results.uncertainty, uncertainty)
+    assert jnp.allclose(fit_results.bestfit, bestfit)
+    assert jnp.allclose(fit_results.uncertainty, uncertainty)
     assert fit_results.labels == labels
-    assert np.allclose(fit_results.corr_mat, corr_mat)
+    assert jnp.allclose(fit_results.corr_mat, corr_mat)
     assert fit_results.best_twice_nll == best_twice_nll
     assert fit_results.goodness_of_fit == -1
 
 
 def test_RankingResults():
-    bestfit = np.asarray([1.0])
-    uncertainty = np.asarray([0.1])
+    bestfit = jnp.asarray([1.0])
+    uncertainty = jnp.asarray([0.1])
     labels = ["par_a"]
-    prefit_up = np.asarray([0.3])
-    prefit_down = np.asarray([-0.3])
-    postfit_up = np.asarray([0.2])
-    postfit_down = np.asarray([-0.2])
+    prefit_up = jnp.asarray([0.3])
+    prefit_down = jnp.asarray([-0.3])
+    postfit_up = jnp.asarray([0.2])
+    postfit_down = jnp.asarray([-0.2])
     ranking_results = fit.RankingResults(
         bestfit, uncertainty, labels, prefit_up, prefit_down, postfit_up, postfit_down
     )
-    assert np.allclose(ranking_results.bestfit, bestfit)
-    assert np.allclose(ranking_results.uncertainty, uncertainty)
+    assert jnp.allclose(ranking_results.bestfit, bestfit)
+    assert jnp.allclose(ranking_results.uncertainty, uncertainty)
     assert ranking_results.labels == labels
-    assert np.allclose(ranking_results.prefit_up, prefit_up)
-    assert np.allclose(ranking_results.prefit_down, prefit_down)
-    assert np.allclose(ranking_results.postfit_up, postfit_up)
-    assert np.allclose(ranking_results.postfit_down, postfit_down)
+    assert jnp.allclose(ranking_results.prefit_up, prefit_up)
+    assert jnp.allclose(ranking_results.prefit_down, prefit_down)
+    assert jnp.allclose(ranking_results.postfit_up, postfit_up)
+    assert jnp.allclose(ranking_results.postfit_down, postfit_down)
 
 
 def test_ScanResults():
     name = "par_a"
     bestfit = 1.2
     uncertainty = 0.3
-    parameter_values = np.asarray([0.9, 1.2, 1.5])
-    delta_nlls = np.asarray([1.0, 0.0, 1.0])
+    parameter_values = jnp.asarray([0.9, 1.2, 1.5])
+    delta_nlls = jnp.asarray([1.0, 0.0, 1.0])
     scan_results = fit.ScanResults(
         name, bestfit, uncertainty, parameter_values, delta_nlls
     )
     assert scan_results.name == name
     assert scan_results.bestfit == bestfit
     assert scan_results.uncertainty == uncertainty
-    assert np.allclose(scan_results.parameter_values, parameter_values)
-    assert np.allclose(scan_results.delta_nlls, delta_nlls)
+    assert jnp.allclose(scan_results.parameter_values, parameter_values)
+    assert jnp.allclose(scan_results.delta_nlls, delta_nlls)
 
 
 def test_LimitResults():
     observed_limit = 3.0
-    expected_limit = np.asarray([1.0, 2.0, 3.0, 4.0, 5.0])
-    observed_CLs = np.asarray([0.05])
-    expected_CLs = np.asarray([0.01, 0.02, 0.05, 0.07, 0.10])
-    poi_values = np.asarray([3.0])
+    expected_limit = jnp.asarray([1.0, 2.0, 3.0, 4.0, 5.0])
+    observed_CLs = jnp.asarray([0.05])
+    expected_CLs = jnp.asarray([0.01, 0.02, 0.05, 0.07, 0.10])
+    poi_values = jnp.asarray([3.0])
     limit_results = fit.LimitResults(
         observed_limit, expected_limit, observed_CLs, expected_CLs, poi_values
     )
     assert limit_results.observed_limit == observed_limit
-    assert np.allclose(limit_results.expected_limit, expected_limit)
-    assert np.allclose(limit_results.observed_CLs, observed_CLs)
-    assert np.allclose(limit_results.expected_CLs, expected_CLs)
-    assert np.allclose(limit_results.poi_values, poi_values)
+    assert jnp.allclose(limit_results.expected_limit, expected_limit)
+    assert jnp.allclose(limit_results.observed_CLs, observed_CLs)
+    assert jnp.allclose(limit_results.expected_CLs, expected_CLs)
+    assert jnp.allclose(limit_results.poi_values, poi_values)
 
 
 def test_SignificanceResults():
@@ -94,10 +93,10 @@ def test_SignificanceResults():
 def test_print_results(caplog):
     caplog.set_level(logging.DEBUG)
 
-    bestfit = np.asarray([1.0, 2.0])
-    uncertainty = np.asarray([0.1, 0.3])
+    bestfit = jnp.asarray([1.0, 2.0])
+    uncertainty = jnp.asarray([0.1, 0.3])
     labels = ["param_A", "param_B"]
-    fit_results = fit.FitResults(bestfit, uncertainty, labels, np.empty(0), 0.0)
+    fit_results = fit.FitResults(bestfit, uncertainty, labels, jnp.empty(0), 0.0)
 
     fit.print_results(fit_results)
     assert "param_A =  1.0000 +/- 0.1000" in [rec.message for rec in caplog.records]
@@ -112,22 +111,22 @@ def test_print_results(caplog):
 def test__fit_model_pyhf(mock_minos, example_spec, example_spec_multibin):
     model, data = model_utils.model_and_data(example_spec)
     fit_results = fit._fit_model_pyhf(model, data)
-    assert np.allclose(fit_results.bestfit, [1.1, 8.32984849])
-    assert np.allclose(fit_results.uncertainty, [0.0, 0.38153046])
+    assert jnp.allclose(fit_results.bestfit, [1.1, 8.32984849])
+    assert jnp.allclose(fit_results.uncertainty, [0.0, 0.38153046])
     assert fit_results.labels == ["staterror_Signal-Region", "Signal strength"]
-    assert np.allclose(fit_results.best_twice_nll, 7.90080379)
-    assert np.allclose(fit_results.corr_mat, [[0.0, 0.0], [0.0, 1.0]])
+    assert jnp.allclose(fit_results.best_twice_nll, 7.90080379)
+    assert jnp.allclose(fit_results.corr_mat, [[0.0, 0.0], [0.0, 1.0]])
 
     # Asimov fit, with fixed gamma (fixed not to Asimov MLE)
     model, data = model_utils.model_and_data(example_spec, asimov=True)
     fit_results = fit._fit_model_pyhf(model, data)
     # the gamma factor is multiplicative and fixed to 1.1, so the
     # signal strength needs to be 1/1.1 to compensate
-    assert np.allclose(fit_results.bestfit, [1.1, 0.90917877])
-    assert np.allclose(fit_results.uncertainty, [0.0, 0.12623183])
+    assert jnp.allclose(fit_results.bestfit, [1.1, 0.90917877])
+    assert jnp.allclose(fit_results.uncertainty, [0.0, 0.12623183])
     assert fit_results.labels == ["staterror_Signal-Region", "Signal strength"]
-    assert np.allclose(fit_results.best_twice_nll, 5.68851093)
-    assert np.allclose(fit_results.corr_mat, [[0.0, 0.0], [0.0, 1.0]])
+    assert jnp.allclose(fit_results.best_twice_nll, 5.68851093)
+    assert jnp.allclose(fit_results.corr_mat, [[0.0, 0.0], [0.0, 1.0]])
 
     # parameters held constant via keyword argument
     model, data = model_utils.model_and_data(example_spec_multibin)
@@ -140,9 +139,9 @@ def test__fit_model_pyhf(mock_minos, example_spec, example_spec_multibin):
     fit_results = fit._fit_model_pyhf(
         model, data, init_pars=init_pars, fix_pars=fix_pars
     )
-    assert np.allclose(fit_results.bestfit, [0.9, 1.1, 1.48041923, 0.97511112])
-    assert np.allclose(fit_results.uncertainty, [0.0, 0.0, 0.20694409, 0.11792805])
-    assert np.allclose(fit_results.best_twice_nll, 10.4531891)
+    assert jnp.allclose(fit_results.bestfit, [0.9, 1.1, 1.48041923, 0.97511112])
+    assert jnp.allclose(fit_results.uncertainty, [0.0, 0.0, 0.20694409, 0.11792805])
+    assert jnp.allclose(fit_results.best_twice_nll, 10.4531891)
 
     # including minos, one parameter is unknown
     model, data = model_utils.model_and_data(example_spec)
@@ -159,22 +158,22 @@ def test__fit_model_pyhf(mock_minos, example_spec, example_spec_multibin):
 def test__fit_model_custom(mock_minos, example_spec, example_spec_multibin):
     model, data = model_utils.model_and_data(example_spec)
     fit_results = fit._fit_model_custom(model, data)
-    assert np.allclose(fit_results.bestfit, [1.1, 8.32985794])
-    assert np.allclose(fit_results.uncertainty, [0.0, 0.38153392])
+    assert jnp.allclose(fit_results.bestfit, [1.1, 8.32985794])
+    assert jnp.allclose(fit_results.uncertainty, [0.0, 0.38153392])
     assert fit_results.labels == ["staterror_Signal-Region", "Signal strength"]
-    assert np.allclose(fit_results.best_twice_nll, 7.90080378)
-    assert np.allclose(fit_results.corr_mat, [[0.0, 0.0], [0.0, 1.0]])
+    assert jnp.allclose(fit_results.best_twice_nll, 7.90080378)
+    assert jnp.allclose(fit_results.corr_mat, [[0.0, 0.0], [0.0, 1.0]])
 
     # Asimov fit, with fixed gamma (fixed not to Asimov MLE)
     model, data = model_utils.model_and_data(example_spec, asimov=True)
     fit_results = fit._fit_model_custom(model, data)
     # the gamma factor is multiplicative and fixed to 1.1, so the
     # signal strength needs to be 1/1.1 to compensate
-    assert np.allclose(fit_results.bestfit, [1.1, 0.90917877])
-    assert np.allclose(fit_results.uncertainty, [0.0, 0.12623172])
+    assert jnp.allclose(fit_results.bestfit, [1.1, 0.90917877])
+    assert jnp.allclose(fit_results.uncertainty, [0.0, 0.12623172])
     assert fit_results.labels == ["staterror_Signal-Region", "Signal strength"]
-    assert np.allclose(fit_results.best_twice_nll, 5.68851093)
-    assert np.allclose(fit_results.corr_mat, [[0.0, 0.0], [0.0, 1.0]])
+    assert jnp.allclose(fit_results.best_twice_nll, 5.68851093)
+    assert jnp.allclose(fit_results.corr_mat, [[0.0, 0.0], [0.0, 1.0]])
 
     # parameters held constant via keyword argument
     model, data = model_utils.model_and_data(example_spec_multibin)
@@ -187,9 +186,9 @@ def test__fit_model_custom(mock_minos, example_spec, example_spec_multibin):
     fit_results = fit._fit_model_custom(
         model, data, init_pars=init_pars, fix_pars=fix_pars
     )
-    assert np.allclose(fit_results.bestfit, [0.9, 1.1, 1.48041923, 0.97511112])
-    assert np.allclose(fit_results.uncertainty, [0.0, 0.0, 0.20694409, 0.11792805])
-    assert np.allclose(fit_results.best_twice_nll, 10.45318909)
+    assert jnp.allclose(fit_results.bestfit, [0.9, 1.1, 1.48041923, 0.97511112])
+    assert jnp.allclose(fit_results.uncertainty, [0.0, 0.0, 0.20694409, 0.11792805])
+    assert jnp.allclose(fit_results.best_twice_nll, 10.45318909)
 
     # including minos
     model, data = model_utils.model_and_data(example_spec)
@@ -204,13 +203,13 @@ def test__fit_model_custom(mock_minos, example_spec, example_spec_multibin):
 @mock.patch(
     "cabinetry.fit._fit_model_custom",
     return_value=fit.FitResults(
-        np.asarray([1.2]), np.asarray([0.2]), ["par"], np.empty(0), 2.0
+        jnp.asarray([1.2]), jnp.asarray([0.2]), ["par"], jnp.empty(0), 2.0
     ),
 )
 @mock.patch(
     "cabinetry.fit._fit_model_pyhf",
     return_value=fit.FitResults(
-        np.asarray([1.1]), np.asarray([0.2]), ["par"], np.empty(0), 2.0
+        jnp.asarray([1.1]), jnp.asarray([0.2]), ["par"], jnp.empty(0), 2.0
     ),
 )
 def test__fit_model(mock_pyhf, mock_custom, example_spec):
@@ -226,7 +225,7 @@ def test__fit_model(mock_pyhf, mock_custom, example_spec):
         "fix_pars": None,
         "minos": None,
     }
-    assert np.allclose(fit_results.bestfit, [1.1])
+    assert jnp.allclose(fit_results.bestfit, [1.1])
 
     # pyhf API, init/fixed pars, minos
     fit_results = fit._fit_model(
@@ -244,7 +243,7 @@ def test__fit_model(mock_pyhf, mock_custom, example_spec):
         "fix_pars": [False, True],
         "minos": ["Signal strength"],
     }
-    assert np.allclose(fit_results.bestfit, [1.1])
+    assert jnp.allclose(fit_results.bestfit, [1.1])
 
     # direct iminuit
     fit_results = fit._fit_model(model, data, custom_fit=True)
@@ -256,7 +255,7 @@ def test__fit_model(mock_pyhf, mock_custom, example_spec):
         "fix_pars": None,
         "minos": None,
     }
-    assert np.allclose(fit_results.bestfit, [1.2])
+    assert jnp.allclose(fit_results.bestfit, [1.2])
 
     # direct iminuit, init/fixed pars, minos
     fit_results = fit._fit_model(
@@ -275,7 +274,7 @@ def test__fit_model(mock_pyhf, mock_custom, example_spec):
         "fix_pars": [False, True],
         "minos": ["Signal strength"],
     }
-    assert np.allclose(fit_results.bestfit, [1.2])
+    assert jnp.allclose(fit_results.bestfit, [1.2])
 
 
 def test__run_minos(caplog):
@@ -284,9 +283,9 @@ def test__run_minos(caplog):
     def func_to_minimize(pars):
         # mock NLL
         return (
-            np.sum(
-                np.power(pars - 2 * np.ones_like(pars), 2)
-                + np.power(pars - 1 * np.ones_like(pars), 4)
+            jnp.sum(
+                jnp.power(pars - 2 * jnp.ones_like(pars), 2)
+                + jnp.power(pars - 1 * jnp.ones_like(pars), 4)
             )
             + pars[0]
         )
@@ -342,7 +341,7 @@ def test__goodness_of_fit(
     assert mock_count.call_args[0][0].spec == model.spec
     assert mock_count.call_args[1] == {}
     assert "Delta NLL = 0.084185" in [rec.message for rec in caplog.records]
-    assert np.allclose(p_val, 0.91926079)
+    assert jnp.allclose(p_val, 0.91926079)
     caplog.clear()
 
     # no auxdata and zero degrees of freedom in chi2 test
@@ -355,7 +354,7 @@ def test__goodness_of_fit(
         "cannot calculate p-value: 0 degrees of freedom and Delta NLL = 0.000000"
         in [rec.message for rec in caplog.records]
     )
-    assert np.isnan(p_val)
+    assert jnp.isnan(p_val)
     caplog.clear()
 
 
@@ -364,7 +363,7 @@ def test__goodness_of_fit(
 @mock.patch(
     "cabinetry.fit._fit_model",
     return_value=fit.FitResults(
-        np.asarray([1.0]), np.asarray([0.1]), ["par"], np.empty(0), 2.0
+        jnp.asarray([1.0]), jnp.asarray([0.1]), ["par"], jnp.empty(0), 2.0
     ),
 )
 def test_fit(mock_fit, mock_print, mock_gof):
@@ -413,42 +412,78 @@ def test_fit(mock_fit, mock_print, mock_gof):
     "cabinetry.fit._fit_model",
     side_effect=[
         fit.FitResults(
-            np.asarray([0.9, 1.3]), np.asarray([0.1, 0.1]), ["a", "b"], np.empty(0), 0.0
+            jnp.asarray([0.9, 1.3]),
+            jnp.asarray([0.1, 0.1]),
+            ["a", "b"],
+            jnp.empty(0),
+            0.0,
         ),
         fit.FitResults(
-            np.asarray([0.9, 0.7]), np.asarray([0.1, 0.1]), ["a", "b"], np.empty(0), 0.0
+            jnp.asarray([0.9, 0.7]),
+            jnp.asarray([0.1, 0.1]),
+            ["a", "b"],
+            jnp.empty(0),
+            0.0,
         ),
         fit.FitResults(
-            np.asarray([0.9, 1.2]), np.asarray([0.1, 0.1]), ["a", "b"], np.empty(0), 0.0
+            jnp.asarray([0.9, 1.2]),
+            jnp.asarray([0.1, 0.1]),
+            ["a", "b"],
+            jnp.empty(0),
+            0.0,
         ),
         fit.FitResults(
-            np.asarray([0.9, 0.8]), np.asarray([0.1, 0.1]), ["a", "b"], np.empty(0), 0.0
+            jnp.asarray([0.9, 0.8]),
+            jnp.asarray([0.1, 0.1]),
+            ["a", "b"],
+            jnp.empty(0),
+            0.0,
         ),
         # for second ranking call with fixed parameter
         fit.FitResults(
-            np.asarray([0.9, 1.2]), np.asarray([0.1, 0.1]), ["a", "b"], np.empty(0), 0.0
+            jnp.asarray([0.9, 1.2]),
+            jnp.asarray([0.1, 0.1]),
+            ["a", "b"],
+            jnp.empty(0),
+            0.0,
         ),
         fit.FitResults(
-            np.asarray([0.9, 0.8]), np.asarray([0.1, 0.1]), ["a", "b"], np.empty(0), 0.0
+            jnp.asarray([0.9, 0.8]),
+            jnp.asarray([0.1, 0.1]),
+            ["a", "b"],
+            jnp.empty(0),
+            0.0,
         ),
         # for third ranking call without reference results
         fit.FitResults(
-            np.asarray([0.9, 1.0]), np.asarray([0.3, 0.3]), ["a", "b"], np.empty(0), 0.0
+            jnp.asarray([0.9, 1.0]),
+            jnp.asarray([0.3, 0.3]),
+            ["a", "b"],
+            jnp.empty(0),
+            0.0,
         ),
         fit.FitResults(
-            np.asarray([0.9, 1.3]), np.asarray([0.1, 0.1]), ["a", "b"], np.empty(0), 0.0
+            jnp.asarray([0.9, 1.3]),
+            jnp.asarray([0.1, 0.1]),
+            ["a", "b"],
+            jnp.empty(0),
+            0.0,
         ),
         fit.FitResults(
-            np.asarray([0.9, 0.7]), np.asarray([0.1, 0.1]), ["a", "b"], np.empty(0), 0.0
+            jnp.asarray([0.9, 0.7]),
+            jnp.asarray([0.1, 0.1]),
+            ["a", "b"],
+            jnp.empty(0),
+            0.0,
         ),
     ],
 )
 def test_ranking(mock_fit, example_spec):
     example_spec["measurements"][0]["config"]["parameters"][0]["fixed"] = False
-    bestfit = np.asarray([0.9, 1.0])
-    uncertainty = np.asarray([0.02, 0.1])
+    bestfit = jnp.asarray([0.9, 1.0])
+    uncertainty = jnp.asarray([0.02, 0.1])
     labels = ["staterror", "mu"]
-    fit_results = fit.FitResults(bestfit, uncertainty, labels, np.empty(0), 0.0)
+    fit_results = fit.FitResults(bestfit, uncertainty, labels, jnp.empty(0), 0.0)
     model, data = model_utils.model_and_data(example_spec)
     ranking_results = fit.ranking(model, data, fit_results=fit_results)
 
@@ -458,22 +493,22 @@ def test_ranking(mock_fit, example_spec):
     assert mock_fit.call_count == 4
     for i in range(4):
         assert mock_fit.call_args_list[i][0] == (model, data)
-        assert np.allclose(
+        assert jnp.allclose(
             mock_fit.call_args_list[i][1]["init_pars"], expected_inits[i]
         )
-        assert np.allclose(mock_fit.call_args_list[i][1]["fix_pars"], expected_fix)
+        assert jnp.allclose(mock_fit.call_args_list[i][1]["fix_pars"], expected_fix)
         assert mock_fit.call_args_list[i][1]["custom_fit"] is False
 
     # POI removed from fit results
-    assert np.allclose(ranking_results.bestfit, [0.9])
-    assert np.allclose(ranking_results.uncertainty, [0.02])
+    assert jnp.allclose(ranking_results.bestfit, [0.9])
+    assert jnp.allclose(ranking_results.uncertainty, [0.02])
     assert ranking_results.labels == ["staterror"]
 
     # received correct mock results
-    assert np.allclose(ranking_results.prefit_up, [0.3])
-    assert np.allclose(ranking_results.prefit_down, [-0.3])
-    assert np.allclose(ranking_results.postfit_up, [0.2])
-    assert np.allclose(ranking_results.postfit_down, [-0.2])
+    assert jnp.allclose(ranking_results.prefit_up, [0.3])
+    assert jnp.allclose(ranking_results.prefit_down, [-0.3])
+    assert jnp.allclose(ranking_results.postfit_up, [0.2])
+    assert jnp.allclose(ranking_results.postfit_down, [-0.2])
 
     # fixed parameter in ranking, custom fit
     example_spec["measurements"][0]["config"]["parameters"][0]["fixed"] = True
@@ -483,10 +518,10 @@ def test_ranking(mock_fit, example_spec):
     # uncertainty is 0 since parameter is fixed, mock post-fit uncertainty is not 0
     assert mock_fit.call_count == 6
     assert mock_fit.call_args[1]["custom_fit"] is True
-    assert np.allclose(ranking_results.prefit_up, [0.0])
-    assert np.allclose(ranking_results.prefit_down, [0.0])
-    assert np.allclose(ranking_results.postfit_up, [0.2])
-    assert np.allclose(ranking_results.postfit_down, [-0.2])
+    assert jnp.allclose(ranking_results.prefit_up, [0.0])
+    assert jnp.allclose(ranking_results.prefit_down, [0.0])
+    assert jnp.allclose(ranking_results.postfit_up, [0.2])
+    assert jnp.allclose(ranking_results.postfit_down, [-0.2])
 
     # no reference results
     ranking_results = fit.ranking(model, data, custom_fit=True)
@@ -495,42 +530,42 @@ def test_ranking(mock_fit, example_spec):
     assert mock_fit.call_args_list[-3] == ((model, data), {"custom_fit": True})
     # fits for impact
     assert mock_fit.call_args_list[-2][0] == (model, data)
-    assert np.allclose(mock_fit.call_args_list[-2][1]["init_pars"], [1.2, 1.0])
+    assert jnp.allclose(mock_fit.call_args_list[-2][1]["init_pars"], [1.2, 1.0])
     assert mock_fit.call_args_list[-2][1]["fix_pars"] == [True, False]
     assert mock_fit.call_args_list[-2][1]["custom_fit"] is True
     assert mock_fit.call_args_list[-1][0] == (model, data)
-    assert np.allclose(mock_fit.call_args_list[-1][1]["init_pars"], [0.6, 1.0])
+    assert jnp.allclose(mock_fit.call_args_list[-1][1]["init_pars"], [0.6, 1.0])
     assert mock_fit.call_args_list[-1][1]["fix_pars"] == [True, False]
     assert mock_fit.call_args_list[-1][1]["custom_fit"] is True
     # ranking results
-    assert np.allclose(ranking_results.prefit_up, [0.0])
-    assert np.allclose(ranking_results.prefit_down, [0.0])
-    assert np.allclose(ranking_results.postfit_up, [0.3])
-    assert np.allclose(ranking_results.postfit_down, [-0.3])
+    assert jnp.allclose(ranking_results.prefit_up, [0.0])
+    assert jnp.allclose(ranking_results.prefit_down, [0.0])
+    assert jnp.allclose(ranking_results.postfit_up, [0.3])
+    assert jnp.allclose(ranking_results.postfit_down, [-0.3])
 
 
 @mock.patch(
     "cabinetry.fit._fit_model",
     side_effect=[
         fit.FitResults(
-            np.asarray([0.9, 1.3]), np.asarray([0.1, 0.1]), [], np.empty(0), 8.0
+            jnp.asarray([0.9, 1.3]), jnp.asarray([0.1, 0.1]), [], jnp.empty(0), 8.0
         )
     ]  # nominal fit
     + [
-        fit.FitResults(np.empty(0), np.empty(0), [], np.empty(0), abs(i) + 8)
-        for i in np.linspace(-5, 5, 11)
+        fit.FitResults(jnp.empty(0), jnp.empty(0), [], jnp.empty(0), abs(i) + 8)
+        for i in jnp.linspace(-5, 5, 11)
     ]  # fits in scan
     + [
         fit.FitResults(
-            np.asarray([0.9, 1.3]), np.asarray([0.1, 0.1]), [], np.empty(0), 2.0
+            jnp.asarray([0.9, 1.3]), jnp.asarray([0.1, 0.1]), [], jnp.empty(0), 2.0
         )
     ]
     * 6,  # fits for custom parameter range
 )
 def test_scan(mock_fit, example_spec):
-    expected_scan_values = np.linspace(1.1, 1.5, 11)
+    expected_scan_values = jnp.linspace(1.1, 1.5, 11)
     # -2 log(L) from unconstrained fit subtracted from expected NLLs
-    expected_delta_nlls = np.abs(np.linspace(-5, 5, 11))
+    expected_delta_nlls = jnp.abs(jnp.linspace(-5, 5, 11))
     model, data = model_utils.model_and_data(example_spec)
 
     par_name = "Signal strength"
@@ -538,8 +573,8 @@ def test_scan(mock_fit, example_spec):
     assert scan_results.name == par_name
     assert scan_results.bestfit == 1.3
     assert scan_results.uncertainty == 0.1
-    assert np.allclose(scan_results.parameter_values, expected_scan_values)
-    assert np.allclose(scan_results.delta_nlls, expected_delta_nlls)
+    assert jnp.allclose(scan_results.parameter_values, expected_scan_values)
+    assert jnp.allclose(scan_results.delta_nlls, expected_delta_nlls)
 
     assert mock_fit.call_count == 12
     # unconstrained fit
@@ -556,8 +591,8 @@ def test_scan(mock_fit, example_spec):
     scan_results = fit.scan(
         model, data, par_name, par_range=(1.0, 1.5), n_steps=5, custom_fit=True
     )
-    expected_custom_scan = np.linspace(1.0, 1.5, 5)
-    assert np.allclose(scan_results.parameter_values, expected_custom_scan)
+    expected_custom_scan = jnp.linspace(1.0, 1.5, 5)
+    assert jnp.allclose(scan_results.parameter_values, expected_custom_scan)
     assert mock_fit.call_args[1]["custom_fit"] is True
 
     # unknown parameter
@@ -579,20 +614,20 @@ def test_limit(example_spec_with_background, caplog):
     model, data = model_utils.model_and_data(example_spec_with_background)
 
     limit_results = fit.limit(model, data)
-    assert np.allclose(limit_results.observed_limit, observed_limit, rtol=1e-2)
-    assert np.allclose(limit_results.expected_limit, expected_limit, rtol=1e-2)
+    assert jnp.allclose(limit_results.observed_limit, observed_limit, rtol=1e-2)
+    assert jnp.allclose(limit_results.expected_limit, expected_limit, rtol=1e-2)
     # compare a few CLs values
-    assert np.allclose(limit_results.observed_CLs[0], 0.780874)
-    assert np.allclose(
+    assert jnp.allclose(limit_results.observed_CLs[0], 0.780874)
+    assert jnp.allclose(
         limit_results.expected_CLs[0],
         [0.402421, 0.548538, 0.719383, 0.878530, 0.971678],
     )
-    assert np.allclose(limit_results.poi_values[0], 0.1)
-    assert np.allclose(limit_results.observed_CLs[-1], 0.0)
-    assert np.allclose(limit_results.expected_CLs[-1], [0.0, 0.0, 0.0, 0.0, 0.0])
-    assert np.allclose(limit_results.poi_values[-1], 8.0)  # from custom POI range
+    assert jnp.allclose(limit_results.poi_values[0], 0.1)
+    assert jnp.allclose(limit_results.observed_CLs[-1], 0.0)
+    assert jnp.allclose(limit_results.expected_CLs[-1], [0.0, 0.0, 0.0, 0.0, 0.0])
+    assert jnp.allclose(limit_results.poi_values[-1], 8.0)  # from custom POI range
     # verify that POI values are sorted
-    assert np.allclose(limit_results.poi_values, sorted(limit_results.poi_values))
+    assert jnp.allclose(limit_results.poi_values, sorted(limit_results.poi_values))
     caplog.clear()
 
     # access negative POI values with lower bracket below zero
@@ -600,8 +635,8 @@ def test_limit(example_spec_with_background, caplog):
     assert "skipping fit for Signal strength = -1.0000, setting CLs = 1" in [
         rec.message for rec in caplog.records
     ]
-    assert np.allclose(limit_results.observed_limit, observed_limit, rtol=5e-2)
-    assert np.allclose(limit_results.expected_limit, expected_limit, rtol=5e-2)
+    assert jnp.allclose(limit_results.observed_limit, observed_limit, rtol=5e-2)
+    assert jnp.allclose(limit_results.expected_limit, expected_limit, rtol=5e-2)
     caplog.clear()
 
     # convergence issues due to number of iterations
@@ -617,8 +652,8 @@ def test_limit(example_spec_with_background, caplog):
     ] = [0.0]
     model, data = model_utils.model_and_data(example_spec_with_background, asimov=True)
     limit_results = fit.limit(model, data)
-    assert np.allclose(limit_results.observed_limit, 0.586, rtol=2e-2)
-    assert np.allclose(limit_results.expected_limit, expected_limit, rtol=2e-2)
+    assert jnp.allclose(limit_results.observed_limit, 0.586, rtol=2e-2)
+    assert jnp.allclose(limit_results.expected_limit, expected_limit, rtol=2e-2)
     caplog.clear()
 
     # bracket does not contain root
@@ -641,15 +676,15 @@ def test_limit(example_spec_with_background, caplog):
 def test_significance(example_spec_with_background):
     model, data = model_utils.model_and_data(example_spec_with_background)
     significance_results = fit.significance(model, data)
-    assert np.allclose(significance_results.observed_p_value, 0.23773068)
-    assert np.allclose(significance_results.observed_significance, 0.71362132)
-    assert np.allclose(significance_results.expected_p_value, 0.00049159)
-    assert np.allclose(significance_results.expected_significance, 3.29529432)
+    assert jnp.allclose(significance_results.observed_p_value, 0.23773068)
+    assert jnp.allclose(significance_results.observed_significance, 0.71362132)
+    assert jnp.allclose(significance_results.expected_p_value, 0.00049159)
+    assert jnp.allclose(significance_results.expected_significance, 3.29529432)
 
     # Asimov dataset, observed = expected
     model, data = model_utils.model_and_data(example_spec_with_background, asimov=True)
     significance_results = fit.significance(model, data)
-    assert np.allclose(significance_results.observed_p_value, 0.00031984)
-    assert np.allclose(significance_results.observed_significance, 3.41421033)
-    assert np.allclose(significance_results.expected_p_value, 0.00031984)
-    assert np.allclose(significance_results.expected_significance, 3.41421033)
+    assert jnp.allclose(significance_results.observed_p_value, 0.00031984)
+    assert jnp.allclose(significance_results.observed_significance, 3.41421033)
+    assert jnp.allclose(significance_results.expected_p_value, 0.00031984)
+    assert jnp.allclose(significance_results.expected_significance, 3.41421033)

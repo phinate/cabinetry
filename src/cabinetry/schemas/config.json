@@ -129,7 +129,7 @@
                     },
                     "uniqueItems": true
                 },
-                "RegionPath": {
+                "Regionpath": {
                     "description": "(part of) path to file containing region",
                     "type": "string"
                 }

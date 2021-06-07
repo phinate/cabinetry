@@ -1,10 +1,9 @@
 import logging
 from typing import Any, Dict, List
 
-import numpy as np
+import jax.numpy as jnp
 import pyhf
 import tabulate
-
 
 log = logging.getLogger(__name__)
 
@@ -70,7 +69,7 @@ def _yields_per_bin(
     total_dict = {"sample": "total"}
     data_dict = {"sample": "data"}
     for i_chan, channel_name in enumerate(model.config.channels):
-        total_model = np.sum(model_yields[i_chan], axis=0)  # sum over samples
+        total_model = jnp.sum(model_yields[i_chan], axis=0)  # sum over samples
         for i_bin in range(model.config.channel_nbins[channel_name]):
             header_name = _header_name(channel_name, i_bin)
             headers.update(
@@ -126,7 +125,7 @@ def _yields_per_channel(
     total_dict = {"sample": "total"}
     data_dict = {"sample": "data"}
     for i_chan, channel_name in enumerate(model.config.channels):
-        total_model = np.sum(model_yields[i_chan], axis=0)  # sum over samples
+        total_model = jnp.sum(model_yields[i_chan], axis=0)  # sum over samples
         total_dict.update(
             {
                 channel_name: f"{total_model:.2f} "

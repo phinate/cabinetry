@@ -4,8 +4,7 @@ from unittest import mock
 
 import pytest
 
-from cabinetry import histo
-from cabinetry import workspace
+from cabinetry import histo, workspace
 
 
 def test_WorkspaceBuilder():

@@ -3,13 +3,9 @@ import logging
 import pathlib
 from typing import Any, Dict, Optional
 
-import numpy as np
+import jax.numpy as jnp
 
-from . import configuration
-from . import histo
-from . import route
-from . import smooth
-
+from . import configuration, histo, route, smooth
 
 log = logging.getLogger(__name__)
 
@@ -23,10 +19,10 @@ def _fix_stat_unc(histogram: histo.Histogram, name: str) -> None:
         histogram (cabinetry.histo.Histogram): the histogram to fix
         name (str): histogram name for logging
     """
-    nan_pos = np.where(np.isnan(histogram.stdev))[0]
+    nan_pos = jnp.where(jnp.isnan(histogram.stdev))[0]
     if len(nan_pos) > 0:
         log.debug(f"fixing ill-defined stat. unc. for {name}")
-        histogram.stdev = np.nan_to_num(histogram.stdev, nan=0.0)
+        histogram.stdev = jnp.nan_to_num(histogram.stdev, nan=0.0)
 
 
 def _apply_353QH_twice(

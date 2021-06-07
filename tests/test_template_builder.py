@@ -3,7 +3,7 @@ import pathlib
 from unittest import mock
 
 import boost_histogram as bh
-import numpy as np
+import jax.numpy as jnp
 import pytest
 
 from cabinetry import template_builder
@@ -216,7 +216,7 @@ def test__get_position_in_file():
 
 
 def test__get_binning():
-    np.testing.assert_equal(
+    jnp.testing.assert_equal(
         template_builder._get_binning({"Binning": [1, 2, 3]}), [1, 2, 3]
     )
     with pytest.raises(NotImplementedError, match="cannot determine binning"):
